@@ -4,3 +4,4 @@ test
 .vscode/
 .idea/
 /tags
+/main.dSYM/Contents/Info.plist
