@@ -2,3 +2,5 @@ build/
 main
 test
 .vscode/
+.idea/
+/tags
