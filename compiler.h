@@ -67,6 +67,13 @@ enum {
   TOKEN_TYPE_NEWLINE
 };
 
+enum {
+  NUMBER_TYPE_NORMAL,
+  NUMBER_TYPE_LONG,
+  NUMBER_TYPE_FLOAT,
+  NUMBER_TYPE_DOUBLE
+};
+
 struct token {
   int type;
   int flags;
@@ -80,6 +87,10 @@ struct token {
     unsigned long long llnum;
     void *any;
   };
+
+  struct token_number {
+	int type;
+  } num;
 
   // true if whitespace between tokens
   bool whitespace;
@@ -123,6 +134,8 @@ struct compile_process {
     const char *abs_path;
   } cfile;
 
+  // A vector of tokens from lexical analysis
+  struct vector *token_vec;
   FILE *ofile;
 };
 
@@ -147,5 +160,7 @@ struct vector *lex_process_tokens(struct lex_process *process);
 int lex(struct lex_process *process);
 
 bool token_is_keyword(struct token *token, const char *value);
+
+struct lex_process *tokens_build_for_string(struct compile_process *compiler, const char *str);
 
 #endif
