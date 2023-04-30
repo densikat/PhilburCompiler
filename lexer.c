@@ -66,10 +66,9 @@ static struct token *handle_whitespace() {
 }
 
 const char *read_number_str() {
-  const char *num = NULL;
   struct buffer *buffer = buffer_create();
   char c = peekc();
-  LEX_GETC_IF(buffer, c, (c >= '0' && c <= '9'));
+  LEX_GETC_IF(buffer, c, (c >= '0' && c <= '9'))
   buffer_write(buffer, 0x00);
   return buffer_ptr(buffer);
 }
@@ -234,7 +233,7 @@ bool is_keyword(const char* str) {
 struct token* token_make_one_line_comment() {
   struct buffer* buffer = buffer_create();
   char c = 0;
-  LEX_GETC_IF(buffer, c, c != '\n' && c != EOF);
+  LEX_GETC_IF(buffer, c, c != '\n' && c != EOF)
   return token_create(&(struct token){.type=TOKEN_TYPE_COMMENT, .sval=buffer_ptr(buffer)});
 }
 
@@ -242,7 +241,7 @@ struct token* token_make_multiline_comment() {
   struct buffer* buffer = buffer_create();
   char c = 0;
   while(1) {
-	LEX_GETC_IF(buffer, c, c != '*' && c != EOF);
+	LEX_GETC_IF(buffer, c, c != '*' && c != EOF)
 	if (c == EOF) {
 	  compiler_error(lex_process->compiler, "You did not close this multiline comment!\n");
 	} else if (c == '*') {
@@ -311,7 +310,7 @@ static struct token *token_make_identifier_or_keyword() {
   char c = 0;
   LEX_GETC_IF(buffer, c,
               (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                  (c >= '0' && c <= '9') || (c == '_'));
+                  (c >= '0' && c <= '9') || (c == '_'))
   // null terminator
   buffer_write(buffer, 0x00);
 
@@ -374,7 +373,7 @@ bool is_hex_char(char c) {
 const char *read_hex_number_str() {
   struct buffer *buffer = buffer_create();
   char c = peekc();
-  LEX_GETC_IF(buffer, c, is_hex_char(c));
+  LEX_GETC_IF(buffer, c, is_hex_char(c))
   buffer_write(buffer, 0x00);
   return buffer_ptr(buffer);
 }

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "compiler.h"
+#include "helpers/vector.h"
 
 struct compile_process *compile_process_create(const char *filename,
                                                const char *filename_out,
@@ -15,13 +16,14 @@ struct compile_process *compile_process_create(const char *filename,
   FILE *out_file = NULL;
   if (filename_out) {
     out_file = fopen(filename_out, "w");
-    if (!filename_out) {
+    if (!out_file) {
       return NULL;
     }
   }
 
   struct compile_process *process = calloc(1, sizeof(struct compile_process));
-
+  process->node_vec = vector_create(sizeof(struct node*));
+  process->node_tree_vec = vector_create(sizeof(struct node*));
   process->flags = flags;
   process->cfile.fp = file;
   process->ofile = out_file;
