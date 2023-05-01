@@ -221,7 +221,16 @@ void *lex_process_private(struct lex_process *process);
 struct vector *lex_process_tokens(struct lex_process *process);
 int lex(struct lex_process *process);
 
+bool token_is_symbol(struct token *token, char c);
+bool token_is_nl_or_comment_or_newline_seperator(struct token *token);
 bool token_is_keyword(struct token *token, const char *value);
+
+struct node* node_create(struct node* _node);
+struct node* node_pop();
+struct node* node_peek();
+struct node* node_peek_or_null();
+void node_push(struct node* node);
+void node_set_vector(struct vector* vec, struct vector* root_vec);
 
 struct lex_process *tokens_build_for_string(struct compile_process *compiler, const char *str);
 int parse(struct compile_process *process);

@@ -54,6 +54,4 @@ int compile_file(const char* filename, const char* out_filename, int flags) {
     // Perform code generation
     
     return COMPILER_FILE_COMPILED_OK;
-    
-    return 0;
 }
