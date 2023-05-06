@@ -3,6 +3,8 @@
 //
 
 #include <assert.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
 #include "compiler.h"
 #include "helpers/vector.h"
@@ -37,6 +39,15 @@ struct node* node_pop() {
   }
 
   return last_node;
+}
+
+bool node_is_expressionable(struct node* node) {
+  return node->type == NODE_TYPE_EXPRESSION || node->type == NODE_TYPE_EXPRESSION_PARENTHESES;
+}
+
+struct node* node_peek_expressionable_or_null() {
+  struct node* last_node = node_peek_or_null();
+  return node_is_expressionable(last_node) ? last_node : NULL;
 }
 
 struct node* node_create(struct node* _node) {

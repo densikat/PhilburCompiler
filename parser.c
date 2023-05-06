@@ -8,6 +8,23 @@
 static struct compile_process *current_process;
 static struct token* parser_last_token;
 
+struct history {
+  int flags;
+};
+
+struct history* history_begin(int flags) {
+  struct history* history = calloc(1, sizeof(struct history));
+  history->flags = flags;
+  return history;
+}
+
+struct history* history_down(struct history* history, int flags) {
+  struct history* new_history = calloc(1, sizeof(struct history));
+  memcpy(new_history, history, sizeof(struct history));
+  new_history->flags = flags;
+  return new_history;
+}
+
 static void parser_ignore_nl_or_comment(struct token* token) {
   while (token && token_is_nl_or_comment_or_newline_seperator(token)) {
 	// Skip the token
@@ -47,6 +64,44 @@ void parse_single_token_to_node() {
   }
 }
 
+void parse_exp_normal(struct history* history) {
+  struct token* op_token = token_peek_next();
+  const char* op = op_token->sval;
+  struct node* node_left = node_peek_expressionable_or_null();
+}
+
+int parse_exp(struct history* history) {
+  parse_exp_normal(history);
+  return 0;
+}
+
+int parse_expressionable_single(struct history* history) {
+  struct token* token = token_peek_next();
+  if(!token) {
+	return -1;
+  }
+
+  history->flags |= NODE_FLAG_INSIDE_EXPRESSION;
+  int res = -1;
+  switch (token->type) {
+	case TOKEN_TYPE_NUMBER:
+	  parse_single_token_to_node();
+	  res = 0;
+	  break;
+
+	case TOKEN_TYPE_OPERATOR:
+	  res = parse_exp(history);
+	  break;
+  }
+  return res;
+}
+
+void parse_expressionable(struct history* history) {
+  while(parse_expressionable_single(history) == 0) {
+
+  }
+}
+
 int parse_next() {
   struct token* token = token_peek_next();
   if (!token) {
@@ -58,7 +113,7 @@ int parse_next() {
 	case TOKEN_TYPE_NUMBER:
 	case TOKEN_TYPE_IDENTIFIER:
 	case TOKEN_TYPE_STRING:
-	  parse_single_token_to_node();
+	  parse_expressionable(history_begin(0));
 	  break;
   }
   return 0;

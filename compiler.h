@@ -90,7 +90,8 @@ struct token {
 
   struct token_number {
 	int type;
-  } num;
+  };
+  struct token_number num;
 
   // true if whitespace between tokens
   bool whitespace;
@@ -132,7 +133,8 @@ struct compile_process {
   struct compile_process_input_file {
     FILE *fp;
     const char *abs_path;
-  } cfile;
+  };
+  struct compile_process_input_file cfile;
 
   // A vector of tokens from lexical analysis
   struct vector *token_vec;
@@ -180,6 +182,10 @@ enum {
   NODE_TYPE_BLANK
 };
 
+enum {
+  NODE_FLAG_INSIDE_EXPRESSION = 0b00000001
+};
+
 struct node {
   int type;
   int flags;
@@ -189,7 +195,9 @@ struct node {
   struct node_binded {
 	struct node* owner; // pointer to our body node
 	struct node* function; // pointer to function we're in
-  } binded;
+  };
+
+ struct node_binded binded;
 
   union {
 	char cval;
