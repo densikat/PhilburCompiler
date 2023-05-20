@@ -223,6 +223,42 @@ enum {
   NODE_FLAG_INSIDE_EXPRESSION = 0b00000001
 };
 
+struct array_brackets {
+  // vector of struct nodes pointers
+  struct vector *n_brackets;
+};
+
+struct node;
+
+struct datatype {
+  int flags;
+  // i.e long, int, float etc
+  int type;
+
+  // i.e long int a; int being secondary
+  struct datatype *secondary;
+
+  const char *type_str;
+
+  // sizeof datatype
+  size_t size;
+
+  int pointer_depth;
+
+  union {
+	struct node *struct_node;
+	struct node *union_node;
+  };
+
+  struct array {
+	struct array_brackets *brackets;
+	/**
+	 * Total array size: datatype_size * each index
+	 */
+	size_t size;
+  } array;
+};
+
 struct node {
   int type;
   int flags;
@@ -242,6 +278,21 @@ struct node {
 	  struct node *right;
 	  const char *op;
 	} exp;
+
+	struct var {
+	  struct datatype type;
+	  const char *name;
+	  struct node *val;
+	} var;
+
+	struct varlist {
+	  // A list of struct node* variables
+	  struct vector *list;
+	} var_list;
+
+	struct bracket {
+	  struct node *inner;
+	} bracket;
   };
 
   union {
@@ -281,27 +332,6 @@ enum {
   DATA_TYPE_UNKNOWN
 };
 
-struct datatype {
-  int flags;
-  // i.e long, int, float etc
-  int type;
-
-  // i.e long int a; int being secondary
-  struct datatype *secondary;
-
-  const char *type_str;
-
-  // sizeof datatype
-  size_t size;
-
-  int pointer_depth;
-
-  union {
-	struct node *struct_node;
-	struct node *union_node;
-  };
-};
-
 enum {
   DATA_TYPE_EXPECT_PRIMITIVE,
   DATA_TYPE_EXPECT_UNION,
@@ -328,6 +358,14 @@ void compile_process_push_char(struct lex_process *lex_process, char c);
 void compiler_error(struct compile_process *compiler, const char *msg, ...);
 void compiler_warning(struct compile_process *compiler, const char *msg, ...);
 
+struct array_brackets *array_brackets_new();
+void array_brackets_free(struct array_brackets *brackets);
+void array_brackets_add(struct array_brackets *brackets, struct node *bracket_node);
+struct vector *array_brackets_node_vector(struct array_brackets *brackets);
+size_t array_brackets_calculate_size_from_index(struct datatype *dtype, struct array_brackets *brackets, int index);
+size_t array_brackets_calculate_size(struct datatype *dtype, struct array_brackets *brackets);
+int array_total_indexes(struct datatype *dtype);
+
 struct lex_process *lex_process_create(struct compile_process *compiler,
 									   struct lex_process_functions *functions,
 									   void *private_data);
@@ -353,6 +391,7 @@ void node_push(struct node *node);
 void node_set_vector(struct vector *vec, struct vector *root_vec);
 bool node_is_expressionable(struct node *node);
 struct node *node_peek_expressionable_or_null();
+void make_bracket_node(struct node *node);
 void make_exp_node(struct node *left_node, struct node *right_node, const char *op);
 
 struct lex_process *tokens_build_for_string(struct compile_process *compiler, const char *str);
