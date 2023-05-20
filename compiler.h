@@ -139,6 +139,18 @@ struct scope {
   struct scope *parent;
 };
 
+enum {
+  SYMBOL_TYPE_NODE,
+  SYMBOL_TYPE_NATIVE_FUNCTION,
+  SYMBOL_TYPE_NATIVE_UNKNOWN
+};
+
+struct symbol {
+  const char *name;
+  int type;
+  void *data;
+};
+
 struct compile_process {
   int flags; // Flags for how file should be compiled
 
@@ -161,6 +173,13 @@ struct compile_process {
 	struct scope *root;
 	struct scope *current;
   } scope;
+
+  struct {
+	// Current active symbol table.
+	struct vector *table;
+	// struc vector* -> table vectors, multi symbol tables
+	struct vector *tables;
+  } symbols;
 };
 
 enum {
