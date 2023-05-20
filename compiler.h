@@ -80,12 +80,12 @@ struct token {
   struct pos pos;
 
   union {
-    char cval;
-    const char *sval;
-    unsigned int inum;
-    unsigned long lnum;
-    unsigned long long llnum;
-    void *any;
+	char cval;
+	const char *sval;
+	unsigned int inum;
+	unsigned long lnum;
+	unsigned long long llnum;
+	void *any;
   };
 
   struct token_number {
@@ -131,8 +131,8 @@ struct compile_process {
 
   struct pos pos;
   struct compile_process_input_file {
-    FILE *fp;
-    const char *abs_path;
+	FILE *fp;
+	const char *abs_path;
   };
   struct compile_process_input_file cfile;
 
@@ -193,11 +193,19 @@ struct node {
   struct pos pos;
 
   struct node_binded {
-	struct node* owner; // pointer to our body node
-	struct node* function; // pointer to function we're in
+	struct node *owner; // pointer to our body node
+	struct node *function; // pointer to function we're in
   };
 
- struct node_binded binded;
+  struct node_binded binded;
+
+  union {
+	struct exp {
+	  struct node *left;
+	  struct node *right;
+	  const char *op;
+	} exp;
+  };
 
   union {
 	char cval;
@@ -209,10 +217,58 @@ struct node {
   };
 };
 
+enum {
+  DATATYPE_FLAG_IS_SIGNED = 0b00000001,
+  DATATYPE_FLAG_IS_STATIC = 0b00000010,
+  DATATYPE_FLAG_IS_CONST = 0b00000100,
+  DATATYPE_FLAG_IS_POINTER = 0b00001000,
+  DATATYPE_FLAG_IS_ARRAY = 0b00010000,
+  DATATYPE_FLAG_IS_EXTERN = 0b00100000,
+  DATATYPE_FLAG_IS_RESTRICT = 0b01000000,
+  DATATYPE_FLAG_IS_IGNORE_TYPE_CHECKING = 0b10000000,
+  DATATYPE_FLAG_IS_SECONDARY = 0b100000000,
+  DATATYPE_FLAG_STRUCT_UNION_NO_NAME = 0b1000000000,
+  DATATYPE_FLAG_IS_LITERAL = 0b10000000000
+};
+
+enum {
+  DATA_TYPE_VOID,
+  DATA_TYPE_CHAR,
+  DATA_TYPE_SHORT,
+  DATA_TYPE_INTEGER,
+  DATA_TYPE_LONG,
+  DATA_TYPE_FLOAT,
+  DATA_TYPE_DOUBLE,
+  DATA_TYPE_STRUCT,
+  DATA_TYPE_UNION,
+  DATA_TYPE_UNKNOWN
+};
+
+struct datatype {
+  int flags;
+  // i.e long, int, float etc
+  int type;
+
+  // i.e long int a; int being secondary
+  struct datatype *secondary;
+
+  const char *type_str;
+
+  // sizeof datatype
+  size_t size;
+
+  int pointer_depth;
+
+  union {
+	struct node *struct_node;
+	struct node *union_node;
+  };
+};
+
 int compile_file(const char *filename, const char *out_filename, int flags);
 struct compile_process *compile_process_create(const char *filename,
-                                               const char *filename_out,
-                                               int flags);
+											   const char *filename_out,
+											   int flags);
 
 char compile_process_next_char(struct lex_process *lex_process);
 char compile_process_peek_char(struct lex_process *lex_process);
@@ -222,8 +278,8 @@ void compiler_error(struct compile_process *compiler, const char *msg, ...);
 void compiler_warning(struct compile_process *compiler, const char *msg, ...);
 
 struct lex_process *lex_process_create(struct compile_process *compiler,
-                                       struct lex_process_functions *functions,
-                                       void *private_data);
+									   struct lex_process_functions *functions,
+									   void *private_data);
 void lex_process_free(struct lex_process *process);
 void *lex_process_private(struct lex_process *process);
 struct vector *lex_process_tokens(struct lex_process *process);
@@ -233,14 +289,32 @@ bool token_is_symbol(struct token *token, char c);
 bool token_is_nl_or_comment_or_newline_seperator(struct token *token);
 bool token_is_keyword(struct token *token, const char *value);
 
-struct node* node_create(struct node* _node);
-struct node* node_pop();
-struct node* node_peek();
-struct node* node_peek_or_null();
-void node_push(struct node* node);
-void node_set_vector(struct vector* vec, struct vector* root_vec);
+bool keyword_is_datatype(const char *str);
+
+struct node *node_create(struct node *_node);
+struct node *node_pop();
+struct node *node_peek();
+struct node *node_peek_or_null();
+void node_push(struct node *node);
+void node_set_vector(struct vector *vec, struct vector *root_vec);
+bool node_is_expressionable(struct node *node);
+struct node *node_peek_expressionable_or_null();
+void make_exp_node(struct node *left_node, struct node *right_node, const char *op);
 
 struct lex_process *tokens_build_for_string(struct compile_process *compiler, const char *str);
 int parse(struct compile_process *process);
+
+#define TOTAL_OPERATOR_GROUPS 14
+#define MAX_OPERATORS_IN_GROUP 12
+
+enum {
+  ASSOCIATIVITY_LEFT_TO_RIGHT,
+  ASSOCIATIVITY_RIGHT_TO_LEFT
+};
+
+struct expressionable_op_precedence_group {
+  char *operators[MAX_OPERATORS_IN_GROUP];
+  int associativity;
+};
 
 #endif
