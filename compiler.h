@@ -265,6 +265,20 @@ struct datatype {
   };
 };
 
+enum {
+  DATA_TYPE_EXPECT_PRIMITIVE,
+  DATA_TYPE_EXPECT_UNION,
+  DATA_TYPE_EXPECT_STRUCT
+};
+
+enum {
+  DATA_SIZE_ZERO = 0,
+  DATA_SIZE_BYTE = 1,
+  DATA_SIZE_WORD = 2,
+  DATA_SIZE_DWORD = 4,
+  DATA_SIZE_DDWORD = 8
+};
+
 int compile_file(const char *filename, const char *out_filename, int flags);
 struct compile_process *compile_process_create(const char *filename,
 											   const char *filename_out,
@@ -290,6 +304,9 @@ bool token_is_nl_or_comment_or_newline_seperator(struct token *token);
 bool token_is_keyword(struct token *token, const char *value);
 
 bool keyword_is_datatype(const char *str);
+bool token_is_primitive_keyword(struct token *token);
+
+bool token_is_operator(struct token *token, const char *val);
 
 struct node *node_create(struct node *_node);
 struct node *node_pop();
@@ -317,4 +334,5 @@ struct expressionable_op_precedence_group {
   int associativity;
 };
 
+bool datatype_is_struct_or_union_for_name(const char *name);
 #endif
