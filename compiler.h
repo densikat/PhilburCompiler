@@ -281,6 +281,7 @@ struct node {
 
 	struct var {
 	  struct datatype type;
+	  int padding;
 	  const char *name;
 	  struct node *val;
 	} var;
@@ -409,6 +410,8 @@ struct node *node_create(struct node *_node);
 struct node *node_pop();
 struct node *node_peek();
 struct node *node_peek_or_null();
+struct node *variable_struct_or_union_body_node(struct node *node);
+bool node_is_struct_or_union_variable(struct node *node);
 void node_push(struct node *node);
 void node_set_vector(struct vector *vec, struct vector *root_vec);
 bool node_is_expressionable(struct node *node);
@@ -440,6 +443,17 @@ size_t datatype_size(struct datatype *dtype);
 size_t datatype_element_size(struct datatype *dtype);
 size_t datatype_size_for_array_access(struct datatype *dtype);
 size_t datatype_size_no_ptr(struct datatype *dtype);
+
+// variable size from given node
+size_t variable_size(struct node *var_node);
+
+// sums size of all variables in node
+size_t variable_size_for_list(struct node *var_list_node);
+
+int padding(int val, int to);
+int align_value(int val, int to);
+int align_value_treat_positive(int val, int to);
+int compute_sum_padding(struct vector *vec);
 
 struct scope *scope_alloc();
 void scope_dealloc(struct scope *scope);
