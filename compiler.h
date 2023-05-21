@@ -293,6 +293,28 @@ struct node {
 	struct bracket {
 	  struct node *inner;
 	} bracket;
+
+	struct _struct {
+	  const char *name;
+	  struct node *body_n;
+
+	  // NULL if no variable attached to struct
+	  struct node *var;
+	} _struct;
+
+	struct body {
+	  // struct node* vector of statements
+	  struct vector *statements;
+
+	  // size of all statements stored together
+	  size_t size;
+
+	  // True if we had to pad size
+	  bool padded;
+
+	  // Pointer to largest (size) variable node in statements vector
+	  struct node *largest_var_node;
+	} body;
   };
 
   union {
@@ -393,6 +415,7 @@ bool node_is_expressionable(struct node *node);
 struct node *node_peek_expressionable_or_null();
 void make_bracket_node(struct node *node);
 void make_exp_node(struct node *left_node, struct node *right_node, const char *op);
+void make_body_node(struct vector *body_vec, size_t size, bool padded, struct node *largest_var_node);
 
 struct lex_process *tokens_build_for_string(struct compile_process *compiler, const char *str);
 int parse(struct compile_process *process);
@@ -410,5 +433,27 @@ struct expressionable_op_precedence_group {
   int associativity;
 };
 
+bool datatype_is_struct_or_union(struct datatype *dtype);
 bool datatype_is_struct_or_union_for_name(const char *name);
+
+size_t datatype_size(struct datatype *dtype);
+size_t datatype_element_size(struct datatype *dtype);
+size_t datatype_size_for_array_access(struct datatype *dtype);
+size_t datatype_size_no_ptr(struct datatype *dtype);
+
+struct scope *scope_alloc();
+void scope_dealloc(struct scope *scope);
+struct scope *scope_create_root(struct compile_process *process);
+void scope_free_root(struct compile_process *process);
+struct scope *scope_new(struct compile_process *process, int flags);
+void scope_iteration_start(struct scope *scope);
+void *scope_iterate_back(struct scope *scope);
+void *scope_last_entity_at_scope(struct scope *scope);
+void *scope_last_entity_from_scope_stop_at(struct scope *scope, struct scope *stop_scope);
+void *scope_last_entity_stop_at(struct compile_process *process, struct scope *stop_scope);
+void *scope_last_entity(struct compile_process *process);
+void scope_push(struct compile_process *process, void *ptr, size_t elem_size);
+void scope_finish(struct compile_process *process);
+struct scope *scope_current(struct compile_process *process);
+
 #endif

@@ -12,6 +12,8 @@
 struct vector *node_vector = NULL;
 struct vector *node_vector_root = NULL;
 
+struct node *parser_current_body = NULL;
+
 void node_set_vector(struct vector *vec, struct vector *root_vec) {
   node_vector = vec;
   node_vector_root = root_vec;
