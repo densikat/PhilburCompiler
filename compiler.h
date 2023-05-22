@@ -282,6 +282,7 @@ struct node {
 	struct var {
 	  struct datatype type;
 	  int padding;
+	  int aoffset; // offset from scope it's related to (aligned)
 	  const char *name;
 	  struct node *val;
 	} var;
@@ -411,6 +412,8 @@ struct node *node_pop();
 struct node *node_peek();
 struct node *node_peek_or_null();
 struct node *variable_struct_or_union_body_node(struct node *node);
+struct node *variable_node(struct node *node);
+bool variable_node_is_primitive(struct node *node);
 bool node_is_struct_or_union_variable(struct node *node);
 void node_push(struct node *node);
 void node_set_vector(struct vector *vec, struct vector *root_vec);
@@ -438,6 +441,7 @@ struct expressionable_op_precedence_group {
 
 bool datatype_is_struct_or_union(struct datatype *dtype);
 bool datatype_is_struct_or_union_for_name(const char *name);
+bool datatype_is_primitive(struct datatype *dtype);
 
 size_t datatype_size(struct datatype *dtype);
 size_t datatype_element_size(struct datatype *dtype);
