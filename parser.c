@@ -721,6 +721,55 @@ void parse_body_single_statement(size_t *variable_size, struct vector *body_vec,
   node_push(body_node);
 }
 
+void parse_body_multiple_statements(size_t *variable_size, struct vector *body_vec, struct history *history) {
+  // Create blank body node
+  make_body_node(NULL, 0, false, NULL);
+  struct node *body_node = node_pop();
+  body_node->binded.owner = parser_current_body;
+  parser_current_body = body_node;
+
+  struct node *stmt_node = NULL;
+  struct node *largest_possible_var_node = NULL;
+  struct node *largest_align_eligible_var_node = NULL;
+
+  expect_sym('{');
+
+  while (!token_next_is_symbol('}')) {
+	parse_statement(history_down(history, history->flags));
+	stmt_node = node_pop();
+	if (stmt_node->type == NODE_TYPE_VARIABLE) {
+	  if (!largest_possible_var_node || (largest_possible_var_node->var.type.size <= stmt_node->var.type.size)) {
+		largest_possible_var_node = stmt_node;
+	  }
+
+	  if (variable_node_is_primitive(stmt_node)) {
+		if (!largest_align_eligible_var_node
+			|| (largest_align_eligible_var_node->var.type.size <= stmt_node->var.type.size)) {
+		  largest_align_eligible_var_node = stmt_node;
+		}
+	  }
+	}
+
+	// Push statement node to body vector
+	vector_push(body_vec, &stmt_node);
+
+	parser_append_size_for_node(history, variable_size, variable_node_or_list(stmt_node));
+  }
+
+  expect_sym('}');
+
+  parser_finalize_body(history,
+					   body_node,
+					   body_vec,
+					   variable_size,
+					   largest_align_eligible_var_node,
+					   largest_possible_var_node);
+
+  parser_current_body = body_node->binded.owner;
+
+  node_push(body_node);
+}
+
 /**
  *
  * @param variables_size Sum of all variable sizes in parsed body
@@ -742,7 +791,12 @@ void parse_body(size_t *variables_size, struct history *history) {
 	return;
   }
 
+  // We have some statements between curly braces
+  parse_body_multiple_statements(variables_size, body_vec, history);
+
   parser_scope_finish();
+
+#warning "Don't forget to adjust the function stack size"
 
 }
 
