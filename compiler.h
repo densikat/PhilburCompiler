@@ -319,6 +319,31 @@ struct node {
 	  // Pointer to largest (size) variable node in statements vector
 	  struct node *largest_var_node;
 	} body;
+
+	// Represents a function
+	struct function {
+	  int flags;
+
+	  // Return type, void, int etc.
+	  struct datatype rtype;
+
+	  // i.e main in int main()
+	  const char *name;
+
+	  struct function_arguments {
+		// Node pointers. NODE_TYPE_VARIABLE
+		struct vector *vector;
+
+		// How much to add to base pointer to find first argument
+		size_t stack_addition;
+	  } args;
+
+	  // NULL if function prototype
+	  struct node *body_n;
+
+	  // Stack size for all variables in function
+	  size_t stack_size;
+	} func;
   };
 
   union {
@@ -370,6 +395,10 @@ enum {
   DATA_SIZE_WORD = 2,
   DATA_SIZE_DWORD = 4,
   DATA_SIZE_DDWORD = 8
+};
+
+enum {
+  FUNCTION_NODE_FLAG_IS_NATIVE = 0b00000001
 };
 
 int compile_file(const char *filename, const char *out_filename, int flags);

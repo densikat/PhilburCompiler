@@ -47,6 +47,7 @@ struct history {
   int flags;
 };
 
+void parse_body(size_t *variables_size, struct history *history);
 void parse_expressionable(struct history *history);
 int parse_expressionable_single(struct history *history);
 void parse_keyword(struct history *history);
@@ -590,7 +591,6 @@ void make_variable_node_and_register(struct history *history,
 									 struct node *value_node) {
   make_variable_node(dtype, name_token, value_node);
   struct node *var_node = node_pop();
-#warning "Remember to calculate scope offset and push to the scope"
   // Calculate the scope offset
   parser_scope_offset(var_node, history);
   // Push the variable node to the scope
@@ -622,8 +622,6 @@ void parse_variable(struct datatype *dtype, struct token *name_token, struct his
 void make_variable_list_node(struct vector *var_list_vec) {
   node_create(&(struct node){.type=NODE_TYPE_VARIABLE_LIST, .var_list.list=var_list_vec});
 }
-
-void parse_body(size_t *variables_size, struct history *history);
 
 void parse_symbol() {
   if (token_next_is_symbol('{')) {
