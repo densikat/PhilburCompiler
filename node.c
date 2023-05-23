@@ -60,6 +60,52 @@ void make_exp_node(struct node *left_node, struct node *right_node, const char *
   node_create(&(struct node){.type=NODE_TYPE_EXPRESSION, .exp.left=left_node, .exp.right=right_node, .exp.op=op});
 }
 
+void make_bracket_node(struct node *node) {
+  node_create(&(struct node){.type=NODE_TYPE_BRACKET, .bracket.inner=node});
+}
+
+void make_body_node(struct vector *body_vec, size_t size, bool padded, struct node *largest_var_node) {
+  node_create(&(struct node){.type=NODE_TYPE_BODY, .body.statements=body_vec, .body.size=size, .body.padded=padded, .body.largest_var_node=largest_var_node});
+}
+
+void make_struct_node(const char *name, struct node *body_node) {
+  int flags = 0;
+  if (!body_node) {
+	flags |= NODE_FLAG_IS_FORWARD_DECLARATION;
+  }
+
+  node_create(&(struct node){.type=NODE_TYPE_STRUCT, ._struct.body_n=body_node, ._struct.name=name, .flags=flags});
+}
+
+struct node *node_from_sym(struct symbol *sym) {
+  if (sym->type != SYMBOL_TYPE_NODE) {
+	return NULL;
+  }
+  return sym->data;
+}
+
+struct node *node_from_symbol(struct compile_process *current_process, const char *name) {
+  struct symbol *sym = symresolver_get_symbol(current_process, name);
+  if (!sym) {
+	return NULL;
+  }
+  return node_from_sym(sym);
+}
+
+struct node *struct_node_for_name(struct compile_process *current_process, const char *name) {
+  struct node *node = node_from_symbol(current_process, name);
+
+  if (!node) {
+	return NULL;
+  }
+
+  if (node->type != NODE_TYPE_STRUCT) {
+	return NULL;
+  }
+
+  return node;
+}
+
 struct node *node_create(struct node *_node) {
   struct node *node = malloc(sizeof(struct node));
   memcpy(node, _node, sizeof(struct node));

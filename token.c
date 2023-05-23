@@ -4,6 +4,11 @@
 const char *primitive_types[PRIMITIVE_TYPES_TOTAL] = {
 	"void", "char", "short", "int", "long", "float", "double"
 };
+
+bool token_is_identifier(struct token *token) {
+  return token && token->type == TOKEN_TYPE_IDENTIFIER;
+}
+
 bool token_is_symbol(struct token *token, char c) {
   return token->type == TOKEN_TYPE_SYMBOL && token->cval == c;
 }

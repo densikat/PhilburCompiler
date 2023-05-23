@@ -91,7 +91,9 @@ static void parser_ignore_nl_or_comment(struct token *token) {
 static struct token *token_next() {
   struct token *next_token = vector_peek_no_increment(current_process->token_vec);
   parser_ignore_nl_or_comment(next_token);
-  current_process->pos = next_token->pos;
+  if (next_token) {
+	current_process->pos = next_token->pos;
+  }
   parser_last_token = next_token;
   return vector_peek(current_process->token_vec);
 }
@@ -345,7 +347,8 @@ void parser_datatype_init_type_and_size_for_primitive(struct token *datatype_tok
 													  struct token *datatype_secondary_token,
 													  struct datatype *datatype_out);
 
-void parse_struct_no_new_scope(struct datatype *dtype);
+void parse_struct_no_new_scope(struct datatype *dtype, bool is_forward_declaration);
+
 void parser_datatype_adjust_size_for_secondary(struct datatype *datatype, struct token *datatype_secondary_token) {
   if (!datatype_secondary_token) {
 	return;
@@ -394,6 +397,20 @@ void parser_datatype_init_type_and_size_for_primitive(struct token *datatype_tok
 
   parser_datatype_adjust_size_for_secondary(datatype_out, datatype_secondary_token);
 }
+
+size_t size_of_struct(const char *struct_name) {
+  struct symbol *sym = symresolver_get_symbol(current_process, struct_name);
+  if (!sym) {
+	return 0;
+  }
+
+  assert(sym->type == SYMBOL_TYPE_NODE);
+
+  struct node *node = sym->data;
+  assert(node->type == NODE_TYPE_STRUCT);
+  return node->_struct.body_n->body.size;
+}
+
 void parser_datatype_init_type_and_size(
 	struct token *datatype_token,
 	struct token *datatype_secondary_token,
@@ -411,8 +428,11 @@ void parser_datatype_init_type_and_size(
 													   datatype_secondary_token,
 													   datatype_out);
 	  break;
-	case DATA_TYPE_EXPECT_STRUCT:
-	case DATA_TYPE_EXPECT_UNION: compiler_error(current_process, "Structs and unions unsupported\n");
+	case DATA_TYPE_EXPECT_STRUCT: datatype_out->type = DATA_TYPE_STRUCT;
+	  datatype_out->size = size_of_struct(datatype_token->sval);
+	  datatype_out->struct_node = struct_node_for_name(current_process, datatype_token->sval);
+	  break;
+	case DATA_TYPE_EXPECT_UNION: compiler_error(current_process, "Unions unsupported\n");
 	  break;
 	default: compiler_error(current_process, "BUG: Unsupported datatype expectation");
   }
@@ -489,14 +509,6 @@ void parse_expressionable_root(struct history *history) {
   parse_expressionable(history);
   struct node *result_node = node_pop();
   node_push(result_node);
-}
-
-void make_bracket_node(struct node *node) {
-  node_create(&(struct node){.type=NODE_TYPE_BRACKET, .bracket.inner=node});
-}
-
-void make_body_node(struct vector *body_vec, size_t size, bool padded, struct node *largest_var_node) {
-  node_create(&(struct node){.type=NODE_TYPE_BODY, .body.statements=body_vec, .body.size=size, .body.padded=padded, .body.largest_var_node=largest_var_node});
 }
 
 struct array_brackets *parse_array_brackets(struct history *history) {
@@ -611,8 +623,16 @@ void make_variable_list_node(struct vector *var_list_vec) {
   node_create(&(struct node){.type=NODE_TYPE_VARIABLE_LIST, .var_list.list=var_list_vec});
 }
 
+void parse_body(size_t *variables_size, struct history *history);
+
 void parse_symbol() {
-  compiler_error(current_process, "Symbols are not yet supported\n");
+  if (token_next_is_symbol('{')) {
+	size_t variable_size = 0;
+	struct history *history = history_begin(HISTORY_FLAG_IS_GLOBAL_SCOPE);
+	parse_body(&variable_size, history);
+	struct node *body_node = node_pop();
+	node_push(body_node);
+  }
 }
 
 void parse_statement(struct history *history) {
@@ -800,8 +820,38 @@ void parse_body(size_t *variables_size, struct history *history) {
 
 }
 
-void parse_struct_no_new_scope(struct datatype *dtype) {
+void parse_struct_no_new_scope(struct datatype *dtype, bool is_forward_declaration) {
+  struct node *body_node = NULL;
+  size_t body_variable_size = 0;
 
+  if (!is_forward_declaration) {
+	parse_body(&body_variable_size, history_begin(HISTORY_FLAG_INSIDE_STRUCTURE));
+	body_node = node_pop();
+  }
+
+  make_struct_node(dtype->type_str, body_node);
+  struct node *struct_node = node_pop();
+  if (body_node) {
+	dtype->size = body_node->body.size;
+  }
+  dtype->struct_node = struct_node;
+
+  if (token_is_identifier(token_peek_next())) {
+	struct token *var_name = token_next();
+	struct_node->flags |= NODE_FLAG_HAS_VARIABLE_COMBINED;
+	if (dtype->flags & DATATYPE_FLAG_STRUCT_UNION_NO_NAME) {
+	  dtype->type_str = var_name->sval;
+	  dtype->flags &= ~DATATYPE_FLAG_STRUCT_UNION_NO_NAME;
+	  struct_node->_struct.name = var_name->sval;
+	}
+
+	make_variable_node_and_register(history_begin(0), dtype, var_name, NULL);
+	struct_node->_struct.var = node_pop();
+  }
+
+  expect_sym(';');
+
+  node_push(struct_node);
 }
 
 void parse_struct(struct datatype *dtype) {
@@ -810,7 +860,7 @@ void parse_struct(struct datatype *dtype) {
 	parser_scope_new();
   }
 
-  parse_struct_no_new_scope(dtype);
+  parse_struct_no_new_scope(dtype, is_forward_declaration);
 
   if (!is_forward_declaration) {
 	parser_scope_finish();
@@ -832,6 +882,12 @@ void parse_variable_function_or_struct_union(struct history *history) {
 
   if (datatype_is_struct_or_union(&dtype) && token_next_is_symbol('{')) {
 	parse_struct_or_union(&dtype);
+
+	// structure/union node
+	struct node *su_node = node_pop();
+	symresolver_build_for_node(current_process, su_node);
+	node_push(su_node);
+	return;
   }
 
   parser_ignore_int(&dtype);
@@ -927,6 +983,8 @@ int parse_next() {
 	case TOKEN_TYPE_STRING: parse_expressionable(history_begin(0));
 	  break;
 	case TOKEN_TYPE_KEYWORD: parse_keyword_for_global();
+	  break;
+	case TOKEN_TYPE_SYMBOL: parse_symbol();
 	  break;
   }
   return 0;
