@@ -135,6 +135,14 @@ void make_case_node(struct node *exp_node) {
   node_create(&(struct node){.type=NODE_TYPE_STATEMENT_CASE, .stmt._case.exp_node=exp_node});
 }
 
+void make_ternary_node(struct node *true_node, struct node *false_node) {
+  node_create(&(struct node){.type=NODE_TYPE_TERNARY, .ternary.true_node=true_node, .ternary.false_node=false_node});
+}
+
+void make_cast_node(struct datatype *dtype, struct node *operand_node) {
+  node_create(&(struct node){.type=NODE_TYPE_CAST, .cast.dtype=*dtype, .cast.operand=operand_node});
+}
+
 struct node *node_from_sym(struct symbol *sym) {
   if (sym->type != SYMBOL_TYPE_NODE) {
 	return NULL;

@@ -44,7 +44,8 @@ enum {
   HISTORY_FLAG_IS_GLOBAL_SCOPE = 0b00000100,
   HISTORY_FLAG_INSIDE_STRUCTURE = 0b00001000,
   HISTORY_FLAG_INSIDE_FUNCTION_BODY = 0b00010000,
-  HISTORY_FLAG_IN_SWITCH_STATEMENT = 0b00100000
+  HISTORY_FLAG_IN_SWITCH_STATEMENT = 0b00100000,
+  HISTORY_FLAG_PARENTHESES_IS_NOT_A_FUNCTIONAL_CALL = 0b01000000
 };
 
 struct history_cases {
@@ -73,11 +74,12 @@ void parser_end_switch_statement(struct parser_history_switch *switch_history) {
 void parser_register_case(struct history *history, struct node *case_node) {
   assert(history->flags & HISTORY_FLAG_IN_SWITCH_STATEMENT);
   struct parsed_switch_case scase;
-#warning "To implement, must be set to the case index"
-  scase.index = 0;
+  scase.index = case_node->stmt._case.exp_node->llnum;
   vector_push(history->_switch.case_data.cases, &scase);
 }
 
+void parse_for_cast();
+void parse_datatype(struct datatype *dtype);
 void parse_body(size_t *variables_size, struct history *history);
 void parse_expressionable(struct history *history);
 int parse_expressionable_single(struct history *history);
@@ -299,6 +301,10 @@ void parser_deal_with_additional_expression() {
 
 void parse_for_parentheses(struct history *history) {
   expect_op("(");
+  if (token_peek_next()->type == TOKEN_TYPE_KEYWORD) {
+	parse_for_cast();
+	return;
+  }
   struct node *left_node = NULL;
   struct node *tmp_node = node_peek_or_null();
   if (tmp_node && node_is_value_type(tmp_node)) {
@@ -323,9 +329,67 @@ void parse_for_parentheses(struct history *history) {
   parser_deal_with_additional_expression();
 }
 
+void parse_for_ternary(struct history *history) {
+  struct node *condition_node = node_pop();
+  expect_op("?");
+  parse_expressionable_root(history_down(history, HISTORY_FLAG_PARENTHESES_IS_NOT_A_FUNCTIONAL_CALL));
+  struct node *true_result_node = node_pop();
+  expect_sym(':');
+  parse_expressionable_root(history_down(history, HISTORY_FLAG_PARENTHESES_IS_NOT_A_FUNCTIONAL_CALL));
+  struct node *false_result_node = node_pop();
+  make_ternary_node(true_result_node, false_result_node);
+  struct node *ternary_node = node_pop();
+  make_exp_node(condition_node, ternary_node, "?");
+}
+
+void parse_for_comma(struct history *history) {
+  // skip comma
+  token_next();
+
+  struct node *left_node = node_pop();
+  parse_expressionable_root(history);
+  struct node *right_node = node_pop();
+  make_exp_node(left_node, right_node, ",");
+}
+
+void parse_for_array(struct history *history) {
+  struct node *left_node = node_peek_or_null();
+  if (left_node) {
+	node_pop();
+  }
+
+  expect_op("[");
+  parse_expressionable_root(history);
+  expect_sym(']');
+
+  struct node *exp_node = node_pop();
+  make_bracket_node(exp_node);
+
+  if (left_node) {
+	struct node *bracket_node = node_pop();
+	make_exp_node(left_node, bracket_node, "[]");
+  }
+}
+
+void parse_for_cast() {
+  // "(" of cast already parsed. (char) seen as char)
+  struct datatype dtype = {};
+  parse_datatype(&dtype);
+  expect_sym(')');
+  parse_expressionable(history_begin(0));
+  struct node *operand_node = node_pop();
+  make_cast_node(&dtype, operand_node);
+}
+
 int parse_exp(struct history *history) {
   if (S_EQ(token_peek_next()->sval, "(")) {
 	parse_for_parentheses(history);
+  } else if (S_EQ(token_peek_next()->sval, "?")) {
+	parse_for_ternary(history);
+  } else if (S_EQ(token_peek_next()->sval, ",")) {
+	parse_for_comma(history);
+  } else if (S_EQ(token_peek_next()->sval, "[")) {
+	parse_for_array(history);
   } else {
 	parse_exp_normal(history);
   }
