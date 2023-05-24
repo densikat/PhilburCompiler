@@ -261,6 +261,11 @@ struct datatype {
   } array;
 };
 
+struct parsed_switch_case {
+  // index of the parsed case
+  int index;
+};
+
 struct node {
   int type;
   int flags;
@@ -383,7 +388,31 @@ struct node {
 		struct node *body_node;
 	  } while_stmt;
 
+	  struct do_while_stmt {
+		struct node *exp_node;
+		struct node *body_node;
+	  } do_while_stmt;
+
+	  struct switch_stmt {
+		struct node *exp;
+		struct node *body;
+		struct vector *cases;
+		bool has_default_case;
+	  } switch_stmt;
+
+	  struct _case_stmt {
+		struct node *exp_node;
+	  } _case;
+
+	  struct _goto_stmt {
+		struct node *label;
+	  } _goto;
+
 	} stmt;
+
+	struct node_label {
+	  struct node *name;
+	} label;
   };
 
   union {
@@ -506,6 +535,13 @@ void make_else_node(struct node *body_node);
 void make_return_node(struct node *exp_node);
 void make_for_node(struct node *init_node, struct node *cond_node, struct node *loop_node, struct node *body_node);
 void make_while_node(struct node *exp_node, struct node *body_node);
+void make_do_while_node(struct node *exp_node, struct node *body_node);
+void make_switch_node(struct node *exp_node, struct node *body_node, struct vector *cases, bool has_default_case);
+void make_continue_node();
+void make_break_node();
+void make_label_node(struct node *name_node);
+void make_goto_node(struct node *label_node);
+void make_case_node(struct node *exp_node);
 struct node *node_from_sym(struct symbol *sym);
 struct node *node_from_symbol(struct compile_process *current_process, const char *name);
 struct node *struct_node_for_name(struct compile_process *current_process, const char *name);

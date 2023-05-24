@@ -1,6 +1,10 @@
 int main(int x) {
-  int i = 0;
   while (1) {
-	int b = 0;
+	continue;
   }
+
+  switch (x) {
+	case 1: break;
+  }
+
 }

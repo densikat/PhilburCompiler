@@ -107,6 +107,34 @@ void make_while_node(struct node *exp_node, struct node *body_node) {
   node_create(&(struct node){.type=NODE_TYPE_STATEMENT_WHILE, .stmt.while_stmt.exp_node=exp_node, .stmt.while_stmt.body_node=body_node});
 }
 
+void make_do_while_node(struct node *exp_node, struct node *body_node) {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_DO_WHILE, .stmt.while_stmt.exp_node=exp_node, .stmt.while_stmt.body_node=body_node});
+}
+
+void make_switch_node(struct node *exp_node, struct node *body_node, struct vector *cases, bool has_default_case) {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_SWITCH, .stmt.switch_stmt.exp=exp_node, .stmt.switch_stmt.body=body_node, .stmt.switch_stmt.cases=cases, .stmt.switch_stmt.has_default_case=has_default_case});
+}
+
+void make_continue_node() {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_CONTINUE});
+}
+
+void make_break_node() {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_BREAK});
+}
+
+void make_label_node(struct node *name_node) {
+  node_create(&(struct node){.type=NODE_TYPE_LABEL, .label.name=name_node});
+}
+
+void make_goto_node(struct node *label_node) {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_GOTO, .stmt._goto.label=label_node});
+}
+
+void make_case_node(struct node *exp_node) {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_CASE, .stmt._case.exp_node=exp_node});
+}
+
 struct node *node_from_sym(struct symbol *sym) {
   if (sym->type != SYMBOL_TYPE_NODE) {
 	return NULL;
