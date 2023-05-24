@@ -351,6 +351,11 @@ struct node {
 	} func;
 
 	struct statement {
+	  struct return_stmt {
+		// expression of the return
+		struct node *exp;
+	  } return_stmt;
+
 	  struct if_stmt {
 		// if (COND)
 		struct node *cond_node;
@@ -365,8 +370,20 @@ struct node {
 	  struct else_stmt {
 		struct node *body_node;
 	  } else_stmt;
-	} stmt;
 
+	  struct for_stmt {
+		struct node *init_node;
+		struct node *cond_node;
+		struct node *loop_node;
+		struct node *body_node;
+	  } for_stmt;
+
+	  struct while_stmt {
+		struct node *exp_node;
+		struct node *body_node;
+	  } while_stmt;
+
+	} stmt;
   };
 
   union {
@@ -486,6 +503,9 @@ void make_struct_node(const char *name, struct node *body_node);
 void make_function_node(struct datatype *ret_type, const char *name, struct vector *arguments, struct node *body_node);
 void make_if_node(struct node *cond_node, struct node *body_node, struct node *next_node);
 void make_else_node(struct node *body_node);
+void make_return_node(struct node *exp_node);
+void make_for_node(struct node *init_node, struct node *cond_node, struct node *loop_node, struct node *body_node);
+void make_while_node(struct node *exp_node, struct node *body_node);
 struct node *node_from_sym(struct symbol *sym);
 struct node *node_from_symbol(struct compile_process *current_process, const char *name);
 struct node *struct_node_for_name(struct compile_process *current_process, const char *name);

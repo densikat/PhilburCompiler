@@ -84,8 +84,6 @@ void make_exp_parentheses_node(struct node *exp_node) {
 
 void make_function_node(struct datatype *ret_type, const char *name, struct vector *arguments, struct node *body_node) {
   node_create(&(struct node){.type=NODE_TYPE_FUNCTION, .func.name=name, .func.args.vector=arguments, .func.body_n=body_node, .func.rtype=*ret_type, .func.args.stack_addition=DATA_SIZE_DDWORD});
-
-  ////return func_node;
 #warning "Don't forget to build the frame elements"
 }
 
@@ -95,6 +93,18 @@ void make_else_node(struct node *body_node) {
 
 void make_if_node(struct node *cond_node, struct node *body_node, struct node *next_node) {
   node_create(&(struct node){.type=NODE_TYPE_STATEMENT_IF, .stmt.if_stmt.cond_node=cond_node, .stmt.if_stmt.body_node=body_node, .stmt.if_stmt.next=next_node});
+}
+
+void make_return_node(struct node *exp_node) {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_RETURN, .stmt.return_stmt.exp=exp_node});
+}
+
+void make_for_node(struct node *init_node, struct node *cond_node, struct node *loop_node, struct node *body_node) {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_FOR, .stmt.for_stmt.init_node=init_node, .stmt.for_stmt.cond_node=cond_node, .stmt.for_stmt.loop_node=loop_node, .stmt.for_stmt.body_node=body_node});
+}
+
+void make_while_node(struct node *exp_node, struct node *body_node) {
+  node_create(&(struct node){.type=NODE_TYPE_STATEMENT_WHILE, .stmt.while_stmt.exp_node=exp_node, .stmt.while_stmt.body_node=body_node});
 }
 
 struct node *node_from_sym(struct symbol *sym) {

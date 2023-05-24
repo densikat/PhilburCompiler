@@ -1002,10 +1002,11 @@ struct vector *parse_function_arguments(struct history *history) {
 	  break;
 	}
 
-	// Popp off comma between arguments (int x, int y) etc.
+	// Pop off comma between arguments (int x, int y) etc.
 	token_next();
   }
   parser_scope_finish();
+  return arguments_vec;
 }
 
 void parse_variable_function_or_struct_union(struct history *history) {
@@ -1100,6 +1101,87 @@ void parse_if_stmt(struct history *history) {
   make_if_node(cond_node, body_node, parse_else_or_else_if(history));
 }
 
+void parse_keyword_parentheses_expression(const char *keyword) {
+  expect_keyword(keyword);
+  expect_op("(");
+  parse_expressionable_root(history_begin(0));
+  expect_sym(')');
+}
+
+void parse_while(struct history *history) {
+  parse_keyword_parentheses_expression("while");
+  struct node *exp_node = node_pop();
+  size_t variable_size = 0;
+  parse_body(&variable_size, history);
+  struct node *body_node = node_pop();
+  make_while_node(exp_node, body_node);
+}
+
+bool parse_for_loop_part(struct history *history) {
+  if (token_next_is_symbol(';')) {
+	token_next();
+	return false;
+  }
+
+  parse_expressionable_root(history);
+  expect_sym(';');
+  return true;
+}
+
+bool parse_for_loop_part_loop(struct history *history) {
+  if (token_next_is_symbol(')')) {
+	return false;
+  }
+
+  parse_expressionable_root(history);
+  return true;
+}
+
+void parse_for_stmt(struct history *history) {
+  struct node *init_node = NULL;
+  struct node *cond_node = NULL;
+  struct node *loop_node = NULL;
+  struct node *body_node = NULL;
+
+  expect_keyword("for");
+  expect_op("(");
+
+  if (parse_for_loop_part(history)) {
+	init_node = node_pop();
+  }
+
+  if (parse_for_loop_part(history)) {
+	cond_node = node_pop();
+  }
+
+  if (parse_for_loop_part_loop(history)) {
+	loop_node = node_pop();
+  }
+
+  expect_sym(')');
+
+  size_t variable_size = 0;
+  parse_body(&variable_size, history);
+  body_node = node_pop();
+
+  make_for_node(init_node, cond_node, loop_node, body_node);
+}
+
+void parse_return(struct history *history) {
+  expect_keyword("return");
+
+  // For returns with no expressions
+  if (token_next_is_symbol(';')) {
+	expect_sym(';');
+	make_return_node(NULL);
+  }
+
+  // For returns with expressions
+  parse_expressionable_root(history);
+  struct node *exp_node = node_pop();
+  make_return_node(exp_node);
+}
+
 void parse_keyword(struct history *history) {
   struct token *token = token_peek_next();
   if (is_keyword_variable_modifier(token->sval) || keyword_is_datatype(token->sval)) {
@@ -1107,8 +1189,17 @@ void parse_keyword(struct history *history) {
 	return;
   }
 
-  if (S_EQ(token->sval, "if")) {
+  if (S_EQ(token->sval, "return")) {
+	parse_return(history);
+	return;
+  } else if (S_EQ(token->sval, "if")) {
 	parse_if_stmt(history);
+	return;
+  } else if (S_EQ(token->sval, "for")) {
+	parse_for_stmt(history);
+	return;
+  } else if (S_EQ(token->sval, "while")) {
+	parse_while(history);
 	return;
   }
 }
