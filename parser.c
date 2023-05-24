@@ -11,6 +11,8 @@ static struct compile_process *current_process;
 static struct token *parser_last_token;
 
 extern struct node *parser_current_body;
+extern struct node *parser_current_function;
+struct node *parser_blank_node;
 extern struct expressionable_op_precedence_group op_precedence[TOTAL_OPERATOR_GROUPS];
 
 enum {
@@ -40,7 +42,8 @@ enum {
   HISTORY_FLAG_INSIDE_UNION = 0b00000001,
   HISTORY_FLAG_IS_UPWARD_STACK = 0b00000010,
   HISTORY_FLAG_IS_GLOBAL_SCOPE = 0b00000100,
-  HISTORY_FLAG_INSIDE_STRUCTURE = 0b00001000
+  HISTORY_FLAG_INSIDE_STRUCTURE = 0b00001000,
+  HISTORY_FLAG_INSIDE_FUNCTION_BODY = 0b00010000
 };
 
 struct history {
@@ -50,7 +53,9 @@ struct history {
 void parse_body(size_t *variables_size, struct history *history);
 void parse_expressionable(struct history *history);
 int parse_expressionable_single(struct history *history);
+void parse_expressionable_root(struct history *history);
 void parse_keyword(struct history *history);
+struct vector *parse_function_arguments(struct history *history);
 
 struct history *history_begin(int flags) {
   struct history *history = calloc(1, sizeof(struct history));
@@ -119,9 +124,21 @@ static void expect_op(const char *op) {
   }
 }
 
+static void expect_keyword(const char *keyword) {
+  struct token *next_token = token_next();
+  if (!next_token || next_token->type != TOKEN_TYPE_KEYWORD || !S_EQ(next_token->sval, keyword)) {
+	compiler_error(current_process, "Expecting the keyword %s but something else was provided\n", keyword);
+  }
+}
+
 static bool token_next_is_operator(const char *op) {
   struct token *token = token_peek_next();
   return token_is_operator(token, op);
+}
+
+static bool token_next_is_keyword(const char *keyword) {
+  struct token *token = token_peek_next();
+  return token_is_keyword(token, keyword);
 }
 
 static bool token_next_is_symbol(char c) {
@@ -246,13 +263,49 @@ void parse_exp_normal(struct history *history) {
   node_push(exp_node);
 }
 
+void parser_deal_with_additional_expression() {
+  if (token_peek_next()->type == TOKEN_TYPE_OPERATOR) {
+	parse_expressionable(history_begin(0));
+  }
+}
+
+void parse_for_parentheses(struct history *history) {
+  expect_op("(");
+  struct node *left_node = NULL;
+  struct node *tmp_node = node_peek_or_null();
+  if (tmp_node && node_is_value_type(tmp_node)) {
+	left_node = tmp_node;
+	node_pop();
+  }
+
+  struct node *exp_node = parser_blank_node;
+  if (!token_next_is_symbol(')')) {
+	parse_expressionable_root(history_begin(0));
+	exp_node = node_pop();
+  }
+  expect_sym(')');
+
+  make_exp_parentheses_node(exp_node);
+
+  if (left_node) {
+	struct node *parentheses_node = node_pop();
+	make_exp_node(left_node, parentheses_node, "()");
+  }
+
+  parser_deal_with_additional_expression();
+}
+
 int parse_exp(struct history *history) {
-  parse_exp_normal(history);
+  if (S_EQ(token_peek_next()->sval, "(")) {
+	parse_for_parentheses(history);
+  } else {
+	parse_exp_normal(history);
+  }
   return 0;
 }
 
 void parse_identifier(struct history *history) {
-  assert(token_peek_next()->type == NODE_TYPE_IDENTIFIER);
+  assert(token_peek_next()->type == TOKEN_TYPE_IDENTIFIER);
   parse_single_token_to_node();
 }
 
@@ -545,8 +598,11 @@ void parser_scope_offset_for_stack(struct node *node, struct history *history) {
   bool upward_stack = history->flags & HISTORY_FLAG_IS_UPWARD_STACK;
   int offset = -variable_size(node);
   if (upward_stack) {
-#warning "HANDLE UPWARD STACK"
-	compiler_error(current_process, "Not yet implemented\n");
+	size_t stack_addition = function_node_argument_stack_addition(parser_current_function);
+	offset = stack_addition;
+	if (last_entity) {
+	  offset = datatype_size(&variable_node(last_entity->node)->var.type);
+	}
   }
 
   if (last_entity) {
@@ -621,6 +677,44 @@ void parse_variable(struct datatype *dtype, struct token *name_token, struct his
 
 void make_variable_list_node(struct vector *var_list_vec) {
   node_create(&(struct node){.type=NODE_TYPE_VARIABLE_LIST, .var_list.list=var_list_vec});
+}
+
+void parse_function_body(struct history *history) {
+  parse_body(NULL, history_down(history, history->flags | HISTORY_FLAG_INSIDE_FUNCTION_BODY));
+}
+
+void parse_function(struct datatype *ret_type, struct token *name_token, struct history *history) {
+  struct vector *arguments_vector = NULL;
+  parser_scope_new();
+  make_function_node(ret_type, name_token->sval, NULL, NULL);
+  struct node *function_node = node_peek();
+  parser_current_function = function_node;
+
+  if (datatype_is_struct_or_union(ret_type)) {
+	function_node->func.args.stack_addition += DATA_SIZE_DWORD;
+  }
+
+  expect_op("(");
+  arguments_vector = parse_function_arguments(history_begin(0));
+  expect_sym(')');
+
+  function_node->func.args.vector = arguments_vector;
+
+  if (symresolver_get_symbol_for_native_function(current_process, name_token->sval)) {
+	function_node->func.flags |= FUNCTION_NODE_FLAG_IS_NATIVE;
+  }
+
+  if (token_next_is_symbol('{')) {
+	// not a prototype function
+	parse_function_body(history_begin(0));
+	struct node *body_node = node_pop();
+	function_node->func.body_n = body_node;
+  } else {
+	expect_sym(';');
+  }
+
+  parser_current_function = NULL;
+  parser_scope_finish();
 }
 
 void parse_symbol() {
@@ -874,6 +968,46 @@ void parse_struct_or_union(struct datatype *dtype) {
   }
 }
 
+void token_read_dots(size_t amount) {
+  for (size_t i = 0; i < amount; i++) {
+	expect_op(".");
+  }
+}
+
+void parse_variable_full(struct history *history) {
+  struct datatype dtype;
+  parse_datatype(&dtype);
+  struct token *name_token = NULL;
+  if (token_peek_next()->type == TOKEN_TYPE_IDENTIFIER) {
+	name_token = token_next();
+  }
+  parse_variable(&dtype, name_token, history);
+}
+
+struct vector *parse_function_arguments(struct history *history) {
+  parser_scope_new();
+  struct vector *arguments_vec = vector_create(sizeof(struct node *));
+  while (!token_next_is_symbol(')')) {
+	if (token_next_is_operator(".")) {
+	  token_read_dots(3);
+	  parser_scope_finish();
+	  return arguments_vec;
+	}
+
+	parse_variable_full(history_down(history, history->flags | HISTORY_FLAG_IS_UPWARD_STACK));
+	struct node *argument_node = node_pop();
+	vector_push(arguments_vec, &argument_node);
+
+	if (!token_next_is_operator(",")) {
+	  break;
+	}
+
+	// Popp off comma between arguments (int x, int y) etc.
+	token_next();
+  }
+  parser_scope_finish();
+}
+
 void parse_variable_function_or_struct_union(struct history *history) {
   struct datatype dtype;
   parse_datatype(&dtype);
@@ -896,6 +1030,10 @@ void parse_variable_function_or_struct_union(struct history *history) {
   }
 
   // Check if function declaration
+  if (token_next_is_operator("(")) {
+	parse_function(&dtype, name_token, history);
+	return;
+  }
 
   parse_variable(&dtype, name_token, history);
 
@@ -920,10 +1058,57 @@ void parse_variable_function_or_struct_union(struct history *history) {
 
 }
 
+void parse_if_stmt(struct history *history);
+
+struct node *parse_else(struct history *history) {
+  size_t var_size = 0;
+  parse_body(&var_size, history);
+  struct node *body_node = node_pop();
+  make_else_node(body_node);
+  return node_pop();
+}
+
+struct node *parse_else_or_else_if(struct history *history) {
+  struct node *node = NULL;
+  // else or else if
+  if (token_next_is_keyword("else")) {
+	token_next();
+
+	if (token_next_is_keyword("if")) {
+	  // this is an else if
+	  parse_if_stmt(history_down(history, 0));
+	  node = node_pop();
+	  return node;
+	}
+
+	// it's an else statement
+	node = parse_else(history_down(history, 0));
+  }
+  return node;
+}
+
+void parse_if_stmt(struct history *history) {
+  expect_keyword("if");
+  expect_op("(");
+  parse_expressionable_root(history);
+  expect_sym(')');
+
+  struct node *cond_node = node_pop();
+  size_t var_size = 0;
+  parse_body(&var_size, history);
+  struct node *body_node = node_pop();
+  make_if_node(cond_node, body_node, parse_else_or_else_if(history));
+}
+
 void parse_keyword(struct history *history) {
   struct token *token = token_peek_next();
   if (is_keyword_variable_modifier(token->sval) || keyword_is_datatype(token->sval)) {
 	parse_variable_function_or_struct_union(history);
+	return;
+  }
+
+  if (S_EQ(token->sval, "if")) {
+	parse_if_stmt(history);
 	return;
   }
 }
@@ -946,7 +1131,6 @@ int parse_expressionable_single(struct history *history) {
 	  break;
 
 	case TOKEN_TYPE_OPERATOR: parse_exp(history);
-	  res = 0;
 	  break;
 
 	case TOKEN_TYPE_KEYWORD: parse_keyword(history);
@@ -993,6 +1177,7 @@ int parse(struct compile_process *process) {
   current_process = process;
   parser_last_token = NULL;
   node_set_vector(process->node_vec, process->node_tree_vec);
+  parser_blank_node = node_create(&(struct node){.type=NODE_TYPE_BLANK});
   struct node *node = NULL;
   vector_set_peek_pointer(process->token_vec, 0);
   while (parse_next() == 0) {

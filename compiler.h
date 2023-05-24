@@ -281,6 +281,11 @@ struct node {
 	  const char *op;
 	} exp;
 
+	struct parenthesis {
+	  // The expression inside the parenthesis node
+	  struct node *exp;
+	} parenthesis;
+
 	struct var {
 	  struct datatype type;
 	  int padding;
@@ -344,6 +349,24 @@ struct node {
 	  // Stack size for all variables in function
 	  size_t stack_size;
 	} func;
+
+	struct statement {
+	  struct if_stmt {
+		// if (COND)
+		struct node *cond_node;
+
+		// if (COND) { BODY };
+		struct node *body_node;
+
+		// else
+		struct node *next;
+	  } if_stmt;
+
+	  struct else_stmt {
+		struct node *body_node;
+	  } else_stmt;
+	} stmt;
+
   };
 
   union {
@@ -451,11 +474,18 @@ bool node_is_struct_or_union_variable(struct node *node);
 void node_push(struct node *node);
 void node_set_vector(struct vector *vec, struct vector *root_vec);
 bool node_is_expressionable(struct node *node);
+bool node_is_expression_or_parentheses(struct node *node);
+bool node_is_value_type(struct node *node);
+size_t function_node_argument_stack_addition(struct node *node);
 struct node *node_peek_expressionable_or_null();
 void make_bracket_node(struct node *node);
 void make_exp_node(struct node *left_node, struct node *right_node, const char *op);
+void make_exp_parentheses_node(struct node *node);
 void make_body_node(struct vector *body_vec, size_t size, bool padded, struct node *largest_var_node);
 void make_struct_node(const char *name, struct node *body_node);
+void make_function_node(struct datatype *ret_type, const char *name, struct vector *arguments, struct node *body_node);
+void make_if_node(struct node *cond_node, struct node *body_node, struct node *next_node);
+void make_else_node(struct node *body_node);
 struct node *node_from_sym(struct symbol *sym);
 struct node *node_from_symbol(struct compile_process *current_process, const char *name);
 struct node *struct_node_for_name(struct compile_process *current_process, const char *name);
@@ -516,5 +546,6 @@ void symresolver_new_table(struct compile_process *process);
 void symresolver_end_table(struct compile_process *process);
 struct symbol *symresolver_get_symbol(struct compile_process *process, const char *name);
 void symresolver_build_for_node(struct compile_process *process, struct node *node);
+struct symbol *symresolver_get_symbol_for_native_function(struct compile_process *process, const char *name);
 
 #endif
