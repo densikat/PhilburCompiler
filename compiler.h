@@ -188,6 +188,11 @@ enum {
 };
 
 enum {
+  CODEGEN_ALL_OK,
+  CODEGEN_GENERAL_ERROR
+};
+
+enum {
   NODE_TYPE_EXPRESSION,
   NODE_TYPE_EXPRESSION_PARENTHESES,
   NODE_TYPE_NUMBER,
@@ -674,5 +679,7 @@ struct fixup *fixup_register(struct fixup_system *system, struct fixup_config *c
 bool fixup_resolve(struct fixup *fixup);
 void *fixup_private(struct fixup *fixup);
 bool fixups_resolve(struct fixup_system *system);
+
+int codegen(struct compile_process *process);
 
 #endif
