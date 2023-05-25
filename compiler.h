@@ -321,6 +321,14 @@ struct node {
 	  struct node *var;
 	} _struct;
 
+	struct _union {
+	  const char *name;
+	  struct node *body_n;
+
+	  // NULL if no variable attached to struct
+	  struct node *var;
+	} _union;
+
 	struct body {
 	  // struct node* vector of statements
 	  struct vector *statements;
@@ -540,6 +548,7 @@ void make_exp_node(struct node *left_node, struct node *right_node, const char *
 void make_exp_parentheses_node(struct node *node);
 void make_body_node(struct vector *body_vec, size_t size, bool padded, struct node *largest_var_node);
 void make_struct_node(const char *name, struct node *body_node);
+void make_union_node(const char *name, struct node *body_node);
 void make_function_node(struct datatype *ret_type, const char *name, struct vector *arguments, struct node *body_node);
 void make_if_node(struct node *cond_node, struct node *body_node, struct node *next_node);
 void make_else_node(struct node *body_node);
@@ -558,6 +567,10 @@ void make_cast_node(struct datatype *dtype, struct node *operand_node);
 struct node *node_from_sym(struct symbol *sym);
 struct node *node_from_symbol(struct compile_process *current_process, const char *name);
 struct node *struct_node_for_name(struct compile_process *current_process, const char *name);
+struct node *union_node_for_name(struct compile_process *current_process, const char *name);
+bool node_is_expression(struct node *node, const char *op);
+bool is_array_node(struct node *node);
+bool is_node_assignment(struct node *node);
 
 struct lex_process *tokens_build_for_string(struct compile_process *compiler, const char *str);
 int parse(struct compile_process *process);
@@ -616,5 +629,50 @@ void symresolver_end_table(struct compile_process *process);
 struct symbol *symresolver_get_symbol(struct compile_process *process, const char *name);
 void symresolver_build_for_node(struct compile_process *process, struct node *node);
 struct symbol *symresolver_get_symbol_for_native_function(struct compile_process *process, const char *name);
+
+struct fixup;
+
+/**
+ * Return true if fixup was successful
+ */
+typedef bool(*FIXUP_FIX)(struct fixup *fixup);
+
+/**
+ * Signifies fixup has been removed from memory
+ */
+typedef void(*FIXUP_END)(struct fixup *fixup);
+
+struct fixup_config {
+  FIXUP_FIX fix;
+  FIXUP_END end;
+  void *private;
+};
+
+struct fixup_system {
+  struct vector *fixups;
+};
+
+enum {
+  FIXUP_FLAG_RESOLVED = 0b00000001
+};
+
+struct fixup {
+  int flags;
+  struct fixup_system *system;
+  struct fixup_config config;
+};
+
+struct fixup_system *fixup_sys_new();
+struct fixup_config *fixup_config(struct fixup *fixup);
+void fixup_free(struct fixup *fixup);
+void fixup_start_iteration(struct fixup_system *system);
+struct fixup *fixup_next(struct fixup_system *system);
+void fixup_sys_fixups_free(struct fixup_system *system);
+void fixup_sys_free(struct fixup_system *system);
+int fixup_sys_unresolved_fixups_count(struct fixup_system *system);
+struct fixup *fixup_register(struct fixup_system *system, struct fixup_config *config);
+bool fixup_resolve(struct fixup *fixup);
+void *fixup_private(struct fixup *fixup);
+bool fixups_resolve(struct fixup_system *system);
 
 #endif
