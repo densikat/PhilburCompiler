@@ -6,3 +6,4 @@ test
 /tags
 /main.dSYM/Contents/Info.plist
 /test.asm
+/compile_commands.json
