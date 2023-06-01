@@ -80,16 +80,16 @@ struct token {
   struct pos pos;
 
   union {
-    char cval;
-    const char *sval;
-    unsigned int inum;
-    unsigned long lnum;
-    unsigned long long llnum;
-    void *any;
+	char cval;
+	const char *sval;
+	unsigned int inum;
+	unsigned long lnum;
+	unsigned long long llnum;
+	void *any;
   };
 
   struct token_number {
-    int type;
+	int type;
   };
   struct token_number num;
 
@@ -159,7 +159,28 @@ struct codegen_exit_point {
   int id;
 };
 
+struct string_table_element {
+  // The string itself
+  const char *str;
+
+  // Label that points to memory where string is found
+  const char label[50];
+};
+
+struct stack_frame_data {
+  struct datatype dtype; // Data type that was pushed to Stack
+};
+
+struct stack_frame_element {
+  int flags;
+  int type;
+  const char *name; // name of frame element, not variable name i.e. result_value
+  int offset_from_bp; // offset from base pointer
+  struct stack_frame_data data;
+};
+
 struct code_generator {
+  struct vector *string_table; // contains string_table_elements
   struct vector *entry_points;
   struct vector *exit_points;
 };
@@ -169,8 +190,8 @@ struct compile_process {
 
   struct pos pos;
   struct compile_process_input_file {
-    FILE *fp;
-    const char *abs_path;
+	FILE *fp;
+	const char *abs_path;
   };
   struct compile_process_input_file cfile;
 
@@ -183,15 +204,15 @@ struct compile_process {
   FILE *ofile;
 
   struct {
-    struct scope *root;
-    struct scope *current;
+	struct scope *root;
+	struct scope *current;
   } scope;
 
   struct {
-    // Current active symbol table.
-    struct vector *table;
-    // struc vector* -> table vectors, multi symbol tables
-    struct vector *tables;
+	// Current active symbol table.
+	struct vector *table;
+	// struc vector* -> table vectors, multi symbol tables
+	struct vector *tables;
   } symbols;
 
   struct code_generator *generator;
@@ -262,16 +283,16 @@ struct datatype {
   int pointer_depth;
 
   union {
-    struct node *struct_node;
-    struct node *union_node;
+	struct node *struct_node;
+	struct node *union_node;
   };
 
   struct array {
-    struct array_brackets *brackets;
-    /**
-     * Total array size: datatype_size * each index
-     */
-    size_t size;
+	struct array_brackets *brackets;
+	/**
+	 * Total array size: datatype_size * each index
+	 */
+	size_t size;
   } array;
 };
 
@@ -287,173 +308,177 @@ struct node {
   struct pos pos;
 
   struct node_binded {
-    struct node *owner;    // pointer to our body node
-    struct node *function; // pointer to function we're in
+	struct node *owner;    // pointer to our body node
+	struct node *function; // pointer to function we're in
   };
 
   struct node_binded binded;
 
   union {
-    struct exp {
-      struct node *left;
-      struct node *right;
-      const char *op;
-    } exp;
+	struct exp {
+	  struct node *left;
+	  struct node *right;
+	  const char *op;
+	} exp;
 
-    struct parenthesis {
-      // The expression inside the parenthesis node
-      struct node *exp;
-    } parenthesis;
+	struct parenthesis {
+	  // The expression inside the parenthesis node
+	  struct node *exp;
+	} parenthesis;
 
-    struct var {
-      struct datatype type;
-      int padding;
-      int aoffset; // offset from scope it's related to (aligned)
-      const char *name;
-      struct node *val;
-    } var;
+	struct var {
+	  struct datatype type;
+	  int padding;
+	  int aoffset; // offset from scope it's related to (aligned)
+	  const char *name;
+	  struct node *val;
+	} var;
 
-    struct node_ternary {
-      struct node *true_node;
-      struct node *false_node;
-    } ternary;
+	struct node_ternary {
+	  struct node *true_node;
+	  struct node *false_node;
+	} ternary;
 
-    struct varlist {
-      // A list of struct node* variables
-      struct vector *list;
-    } var_list;
+	struct varlist {
+	  // A list of struct node* variables
+	  struct vector *list;
+	} var_list;
 
-    struct bracket {
-      struct node *inner;
-    } bracket;
+	struct bracket {
+	  struct node *inner;
+	} bracket;
 
-    struct _struct {
-      const char *name;
-      struct node *body_n;
+	struct _struct {
+	  const char *name;
+	  struct node *body_n;
 
-      // NULL if no variable attached to struct
-      struct node *var;
-    } _struct;
+	  // NULL if no variable attached to struct
+	  struct node *var;
+	} _struct;
 
-    struct _union {
-      const char *name;
-      struct node *body_n;
+	struct _union {
+	  const char *name;
+	  struct node *body_n;
 
-      // NULL if no variable attached to struct
-      struct node *var;
-    } _union;
+	  // NULL if no variable attached to struct
+	  struct node *var;
+	} _union;
 
-    struct body {
-      // struct node* vector of statements
-      struct vector *statements;
+	struct body {
+	  // struct node* vector of statements
+	  struct vector *statements;
 
-      // size of all statements stored together
-      size_t size;
+	  // size of all statements stored together
+	  size_t size;
 
-      // True if we had to pad size
-      bool padded;
+	  // True if we had to pad size
+	  bool padded;
 
-      // Pointer to largest (size) variable node in statements vector
-      struct node *largest_var_node;
-    } body;
+	  // Pointer to largest (size) variable node in statements vector
+	  struct node *largest_var_node;
+	} body;
 
-    // Represents a function
-    struct function {
-      int flags;
+	// Represents a function
+	struct function {
+	  int flags;
 
-      // Return type, void, int etc.
-      struct datatype rtype;
+	  // Return type, void, int etc.
+	  struct datatype rtype;
 
-      // i.e main in int main()
-      const char *name;
+	  // i.e main in int main()
+	  const char *name;
 
-      struct function_arguments {
-        // Node pointers. NODE_TYPE_VARIABLE
-        struct vector *vector;
+	  struct function_arguments {
+		// Node pointers. NODE_TYPE_VARIABLE
+		struct vector *vector;
 
-        // How much to add to base pointer to find first argument
-        size_t stack_addition;
-      } args;
+		// How much to add to base pointer to find first argument
+		size_t stack_addition;
+	  } args;
 
-      // NULL if function prototype
-      struct node *body_n;
+	  // NULL if function prototype
+	  struct node *body_n;
 
-      // Stack size for all variables in function
-      size_t stack_size;
-    } func;
+	  struct stack_frame {
+		struct vector *elements; // a vector of stack frame elements
+	  } frame;
 
-    struct statement {
-      struct return_stmt {
-        // expression of the return
-        struct node *exp;
-      } return_stmt;
+	  // Stack size for all variables in function
+	  size_t stack_size;
+	} func;
 
-      struct if_stmt {
-        // if (COND)
-        struct node *cond_node;
+	struct statement {
+	  struct return_stmt {
+		// expression of the return
+		struct node *exp;
+	  } return_stmt;
 
-        // if (COND) { BODY };
-        struct node *body_node;
+	  struct if_stmt {
+		// if (COND)
+		struct node *cond_node;
 
-        // else
-        struct node *next;
-      } if_stmt;
+		// if (COND) { BODY };
+		struct node *body_node;
 
-      struct else_stmt {
-        struct node *body_node;
-      } else_stmt;
+		// else
+		struct node *next;
+	  } if_stmt;
 
-      struct for_stmt {
-        struct node *init_node;
-        struct node *cond_node;
-        struct node *loop_node;
-        struct node *body_node;
-      } for_stmt;
+	  struct else_stmt {
+		struct node *body_node;
+	  } else_stmt;
 
-      struct while_stmt {
-        struct node *exp_node;
-        struct node *body_node;
-      } while_stmt;
+	  struct for_stmt {
+		struct node *init_node;
+		struct node *cond_node;
+		struct node *loop_node;
+		struct node *body_node;
+	  } for_stmt;
 
-      struct do_while_stmt {
-        struct node *exp_node;
-        struct node *body_node;
-      } do_while_stmt;
+	  struct while_stmt {
+		struct node *exp_node;
+		struct node *body_node;
+	  } while_stmt;
 
-      struct switch_stmt {
-        struct node *exp;
-        struct node *body;
-        struct vector *cases;
-        bool has_default_case;
-      } switch_stmt;
+	  struct do_while_stmt {
+		struct node *exp_node;
+		struct node *body_node;
+	  } do_while_stmt;
 
-      struct _case_stmt {
-        struct node *exp_node;
-      } _case;
+	  struct switch_stmt {
+		struct node *exp;
+		struct node *body;
+		struct vector *cases;
+		bool has_default_case;
+	  } switch_stmt;
 
-      struct _goto_stmt {
-        struct node *label;
-      } _goto;
+	  struct _case_stmt {
+		struct node *exp_node;
+	  } _case;
 
-    } stmt;
+	  struct _goto_stmt {
+		struct node *label;
+	  } _goto;
 
-    struct node_label {
-      struct node *name;
-    } label;
+	} stmt;
 
-    struct cast {
-      struct datatype dtype;
-      struct node *operand;
-    } cast;
+	struct node_label {
+	  struct node *name;
+	} label;
+
+	struct cast {
+	  struct datatype dtype;
+	  struct node *operand;
+	} cast;
   };
 
   union {
-    char cval;
-    const char *sval;
-    unsigned int inum;
-    unsigned long lnum;
-    unsigned long long llnum;
-    void *any;
+	char cval;
+	const char *sval;
+	unsigned int inum;
+	unsigned long lnum;
+	unsigned long long llnum;
+	void *any;
   };
 };
 
@@ -502,8 +527,8 @@ enum { FUNCTION_NODE_FLAG_IS_NATIVE = 0b00000001 };
 
 int compile_file(const char *filename, const char *out_filename, int flags);
 struct compile_process *compile_process_create(const char *filename,
-                                               const char *filename_out,
-                                               int flags);
+											   const char *filename_out,
+											   int flags);
 
 char compile_process_next_char(struct lex_process *lex_process);
 char compile_process_peek_char(struct lex_process *lex_process);
@@ -515,18 +540,18 @@ void compiler_warning(struct compile_process *compiler, const char *msg, ...);
 struct array_brackets *array_brackets_new();
 void array_brackets_free(struct array_brackets *brackets);
 void array_brackets_add(struct array_brackets *brackets,
-                        struct node *bracket_node);
+						struct node *bracket_node);
 struct vector *array_brackets_node_vector(struct array_brackets *brackets);
 size_t array_brackets_calculate_size_from_index(struct datatype *dtype,
-                                                struct array_brackets *brackets,
-                                                int index);
+												struct array_brackets *brackets,
+												int index);
 size_t array_brackets_calculate_size(struct datatype *dtype,
-                                     struct array_brackets *brackets);
+									 struct array_brackets *brackets);
 int array_total_indexes(struct datatype *dtype);
 
 struct lex_process *lex_process_create(struct compile_process *compiler,
-                                       struct lex_process_functions *functions,
-                                       void *private_data);
+									   struct lex_process_functions *functions,
+									   void *private_data);
 void lex_process_free(struct lex_process *process);
 void *lex_process_private(struct lex_process *process);
 struct vector *lex_process_tokens(struct lex_process *process);
@@ -560,24 +585,24 @@ size_t function_node_argument_stack_addition(struct node *node);
 struct node *node_peek_expressionable_or_null();
 void make_bracket_node(struct node *node);
 void make_exp_node(struct node *left_node, struct node *right_node,
-                   const char *op);
+				   const char *op);
 void make_exp_parentheses_node(struct node *node);
 void make_body_node(struct vector *body_vec, size_t size, bool padded,
-                    struct node *largest_var_node);
+					struct node *largest_var_node);
 void make_struct_node(const char *name, struct node *body_node);
 void make_union_node(const char *name, struct node *body_node);
 void make_function_node(struct datatype *ret_type, const char *name,
-                        struct vector *arguments, struct node *body_node);
+						struct vector *arguments, struct node *body_node);
 void make_if_node(struct node *cond_node, struct node *body_node,
-                  struct node *next_node);
+				  struct node *next_node);
 void make_else_node(struct node *body_node);
 void make_return_node(struct node *exp_node);
 void make_for_node(struct node *init_node, struct node *cond_node,
-                   struct node *loop_node, struct node *body_node);
+				   struct node *loop_node, struct node *body_node);
 void make_while_node(struct node *exp_node, struct node *body_node);
 void make_do_while_node(struct node *exp_node, struct node *body_node);
 void make_switch_node(struct node *exp_node, struct node *body_node,
-                      struct vector *cases, bool has_default_case);
+					  struct vector *cases, bool has_default_case);
 void make_continue_node();
 void make_break_node();
 void make_label_node(struct node *name_node);
@@ -587,17 +612,17 @@ void make_ternary_node(struct node *true_node, struct node *false_node);
 void make_cast_node(struct datatype *dtype, struct node *operand_node);
 struct node *node_from_sym(struct symbol *sym);
 struct node *node_from_symbol(struct compile_process *current_process,
-                              const char *name);
+							  const char *name);
 struct node *struct_node_for_name(struct compile_process *current_process,
-                                  const char *name);
+								  const char *name);
 struct node *union_node_for_name(struct compile_process *current_process,
-                                 const char *name);
+								 const char *name);
 bool node_is_expression(struct node *node, const char *op);
 bool is_array_node(struct node *node);
 bool is_node_assignment(struct node *node);
 
 struct lex_process *tokens_build_for_string(struct compile_process *compiler,
-                                            const char *str);
+											const char *str);
 int parse(struct compile_process *process);
 
 #define TOTAL_OPERATOR_GROUPS 14
@@ -639,9 +664,9 @@ void scope_iteration_start(struct scope *scope);
 void *scope_iterate_back(struct scope *scope);
 void *scope_last_entity_at_scope(struct scope *scope);
 void *scope_last_entity_from_scope_stop_at(struct scope *scope,
-                                           struct scope *stop_scope);
+										   struct scope *stop_scope);
 void *scope_last_entity_stop_at(struct compile_process *process,
-                                struct scope *stop_scope);
+								struct scope *stop_scope);
 void *scope_last_entity(struct compile_process *process);
 void scope_push(struct compile_process *process, void *ptr, size_t elem_size);
 void scope_finish(struct compile_process *process);
@@ -651,12 +676,12 @@ void symresolver_initialize(struct compile_process *process);
 void symresolver_new_table(struct compile_process *process);
 void symresolver_end_table(struct compile_process *process);
 struct symbol *symresolver_get_symbol(struct compile_process *process,
-                                      const char *name);
+									  const char *name);
 void symresolver_build_for_node(struct compile_process *process,
-                                struct node *node);
+								struct node *node);
 struct symbol *
 symresolver_get_symbol_for_native_function(struct compile_process *process,
-                                           const char *name);
+										   const char *name);
 
 struct fixup;
 
@@ -697,7 +722,7 @@ void fixup_sys_fixups_free(struct fixup_system *system);
 void fixup_sys_free(struct fixup_system *system);
 int fixup_sys_unresolved_fixups_count(struct fixup_system *system);
 struct fixup *fixup_register(struct fixup_system *system,
-                             struct fixup_config *config);
+							 struct fixup_config *config);
 bool fixup_resolve(struct fixup *fixup);
 void *fixup_private(struct fixup *fixup);
 bool fixups_resolve(struct fixup_system *system);
