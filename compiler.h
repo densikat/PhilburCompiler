@@ -7,6 +7,9 @@
 
 #define S_EQ(str, str2) (str && str2 && (strcmp(str, str2) == 0))
 
+// Forward declarations
+struct datatype;
+
 struct pos {
   int line;
   int col;
@@ -168,7 +171,7 @@ struct string_table_element {
 };
 
 struct stack_frame_data {
-  struct datatype dtype; // Data type that was pushed to Stack
+  struct datatype *dtype; // Data type that was pushed to Stack
 };
 
 struct stack_frame_element {
@@ -183,6 +186,23 @@ struct code_generator {
   struct vector *string_table; // contains string_table_elements
   struct vector *entry_points;
   struct vector *exit_points;
+};
+
+#define STACK_PUSH_SIZE 4 // 32-bit
+
+enum {
+  STACK_FRAME_ELEMENT_TYPE_LOCAL_VARIABLE,
+  STACK_FRAME_ELEMENT_TYPE_SAVED_REGISTER,
+  STACK_FRAME_ELEMENT_TYPE_SAVED_BP,
+  STACK_FRAME_ELEMENT_TYPE_PUSHED_VALUE,
+  STACK_FRAME_ELEMENT_TYPE_UNKNOWN
+};
+
+enum {
+  STACK_FRAME_ELEMENT_FLAG_IS_PUSHED_ADDRESS = 0b00000001,
+  STACK_FRAME_ELEMENT_FLAG_ELEMENT_NOT_FOUND = 0b00000010,
+  STACK_FRAME_ELEMENT_FLAG_IS_NUMERICAL = 0b00000100,
+  STACK_FRAME_ELEMENT_FLAG_HAS_DATATYPE = 0b00001000
 };
 
 struct compile_process {
@@ -729,5 +749,19 @@ bool fixups_resolve(struct fixup_system *system);
 
 int codegen(struct compile_process *process);
 struct code_generator *codegenerator_new(struct compile_process *process);
+
+// STACK FRAME FUNCTIONS
+void stackframe_pop(struct node *func_node);
+struct stack_frame_element *stackframe_back(struct node *func_node);
+struct stack_frame_element *stackframe_back_expect(struct node *func_node,
+												   int expecting_type,
+												   const char *expecting_name);
+void stackframe_pop_expecting(struct node *func_node, int expecting_type, const char *expecting_name);
+void stackframe_peek_start(struct node *func_node);
+struct stack_frame_element *stackframe_peek(struct node *func_node);
+void stackframe_push(struct node *func_node, struct stack_frame_element *element);
+void stackframe_sub(struct node *func_node, int type, const char *name, size_t amount);
+void stackframe_add(struct node *func_node, int type, const char *name, size_t amount);
+void stackframe_assert_empty(struct node *func_node);
 
 #endif
