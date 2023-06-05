@@ -563,7 +563,7 @@ struct resolver_process {
 	struct resolver_scope *root;
 	struct resolver_scope *current;
   } scope;
-  struct compile_process *process;
+  struct compile_process *compiler;
   struct resolver_callbacks callbacks;
 };
 
@@ -627,7 +627,6 @@ struct resolver_entity {
 
 	struct resolver_array {
 	  struct datatype dtype;
-	  int multiplier;
 	  struct node *array_index_node;
 	  int index;
 	} array;
@@ -761,6 +760,8 @@ struct node *node_peek_or_null();
 struct node *variable_struct_or_union_body_node(struct node *node);
 struct node *variable_node(struct node *node);
 struct node *variable_node_or_list(struct node *node);
+int array_multiplier(struct datatype *dtype, int index, int index_value);
+int array_offset(struct datatype *dtype, int index, int index_value);
 bool variable_node_is_primitive(struct node *node);
 bool node_is_struct_or_union_variable(struct node *node);
 void node_push(struct node *node);

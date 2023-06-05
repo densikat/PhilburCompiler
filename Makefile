@@ -1,4 +1,4 @@
-OBJECTS= ./build/compiler.o ./build/helper.o ./build/fixup.o ./build/stackframe.o ./build/codegen.o ./build/cprocess.o ./build/lexer.o ./build/parser.o ./build/node.o ./build/array.o ./build/expressionable.o ./build/scope.o ./build/symresolver.o ./build/datatype.o ./build/token.o ./build/lex_process.o ./build/helpers/vector.o ./build/helpers/buffer.o
+OBJECTS= ./build/compiler.o ./build/helper.o ./build/fixup.o ./build/stackframe.o ./build/codegen.o ./build/resolver.o ./build/cprocess.o ./build/lexer.o ./build/parser.o ./build/node.o ./build/array.o ./build/expressionable.o ./build/scope.o ./build/symresolver.o ./build/datatype.o ./build/token.o ./build/lex_process.o ./build/helpers/vector.o ./build/helpers/buffer.o
 INCLUDES= -I./
 
 all: ${OBJECTS}
@@ -18,6 +18,9 @@ all: ${OBJECTS}
 
 ./build/codegen.o: ./codegen.c
 	gcc ./codegen.c ${INCLUDES} -o ./build/codegen.o -g -c
+
+./build/resolver.o: ./resolver.c
+	gcc ./resolver.c ${INCLUDES} -o ./build/resolver.o -g -c
 
 ./build/cprocess.o: ./cprocess.c
 	gcc ./cprocess.c ${INCLUDES} -o ./build/cprocess.o -g -c
