@@ -709,6 +709,11 @@ enum {
   DATA_SIZE_DDWORD = 8
 };
 
+enum {
+  STRUCT_ACCESS_BACKWARDS = 0b00000001,
+  STRUCT_STOP_AT_POINTER_ACCESS = 0b00000010
+};
+
 enum { FUNCTION_NODE_FLAG_IS_NATIVE = 0b00000001 };
 
 int compile_file(const char *filename, const char *out_filename, int flags);
@@ -760,8 +765,13 @@ struct node *node_peek_or_null();
 struct node *variable_struct_or_union_body_node(struct node *node);
 struct node *variable_node(struct node *node);
 struct node *variable_node_or_list(struct node *node);
+bool node_is_struct_or_union(struct node *node);
 int array_multiplier(struct datatype *dtype, int index, int index_value);
 int array_offset(struct datatype *dtype, int index, int index_value);
+
+struct node *variable_struct_or_union_largest_variable_node(struct node *var_node);
+int struct_offset(struct compile_process *compile_proc, const char *struct_name, const char *var_name,
+				  struct node **var_node_out, int last_pos, int flags);
 bool variable_node_is_primitive(struct node *node);
 bool node_is_struct_or_union_variable(struct node *node);
 void node_push(struct node *node);
