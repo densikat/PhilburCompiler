@@ -816,9 +816,15 @@ struct node *struct_node_for_name(struct compile_process *current_process,
 struct node *union_node_for_name(struct compile_process *current_process,
 								 const char *name);
 bool node_is_expression(struct node *node, const char *op);
-bool is_array_node(struct node *node);
 bool is_node_assignment(struct node *node);
 
+bool is_access_operator(const char *op);
+bool is_array_operator(const char *op);
+bool is_parentheses_operator(const char *op);
+bool is_access_node(struct node *node);
+bool is_array_node(struct node *node);
+bool is_parentheses_node(struct node *node);
+bool is_access_node_with_op(struct node *node, const char *op);
 struct lex_process *tokens_build_for_string(struct compile_process *compiler,
 											const char *str);
 int parse(struct compile_process *process);
