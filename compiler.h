@@ -824,6 +824,8 @@ bool is_parentheses_operator(const char *op);
 bool is_access_node(struct node *node);
 bool is_array_node(struct node *node);
 bool is_parentheses_node(struct node *node);
+bool is_argument_node(struct node *node);
+bool node_valid(struct node *node);
 bool is_access_node_with_op(struct node *node, const char *op);
 struct lex_process *tokens_build_for_string(struct compile_process *compiler,
 											const char *str);
