@@ -321,6 +321,20 @@ struct parsed_switch_case {
   int index;
 };
 
+struct node;
+
+struct unary {
+  // e.g. * for a pointer. For multiple pointers, only first op is here
+  const char *op;
+  struct node *operand;
+  union {
+	struct indirection {
+	  // pointer depth
+	  int depth;
+	} indirection;
+  };
+};
+
 struct node {
   int type;
   int flags;
@@ -490,6 +504,8 @@ struct node {
 	  struct datatype dtype;
 	  struct node *operand;
 	} cast;
+
+	struct unary unary;
   };
 
   union {
@@ -660,7 +676,7 @@ struct resolver_entity {
 
   struct resolver_result *result; // the result of the resolution
 
-  struct resolver_process *process;
+  struct resolver_process *resolver;
 
   void *private;
 
@@ -738,6 +754,8 @@ size_t array_brackets_calculate_size_from_index(struct datatype *dtype,
 												int index);
 size_t array_brackets_calculate_size(struct datatype *dtype,
 									 struct array_brackets *brackets);
+
+size_t array_brackets_count(struct datatype *dtype);
 int array_total_indexes(struct datatype *dtype);
 
 struct lex_process *lex_process_create(struct compile_process *compiler,
@@ -808,6 +826,7 @@ void make_goto_node(struct node *label_node);
 void make_case_node(struct node *exp_node);
 void make_ternary_node(struct node *true_node, struct node *false_node);
 void make_cast_node(struct datatype *dtype, struct node *operand_node);
+void make_unary_node(const char *op, struct node *operand_node);
 struct node *node_from_sym(struct symbol *sym);
 struct node *node_from_symbol(struct compile_process *current_process,
 							  const char *name);
@@ -825,7 +844,11 @@ bool is_access_node(struct node *node);
 bool is_array_node(struct node *node);
 bool is_parentheses_node(struct node *node);
 bool is_argument_node(struct node *node);
+bool is_unary_operator(const char *op);
+bool op_is_indirection(const char *op);
+bool op_is_address(const char *op);
 bool node_valid(struct node *node);
+void datatype_decrement_pointer(struct datatype *dtype);
 bool is_access_node_with_op(struct node *node, const char *op);
 struct lex_process *tokens_build_for_string(struct compile_process *compiler,
 											const char *str);
@@ -843,6 +866,7 @@ struct expressionable_op_precedence_group {
 
 bool datatype_is_struct_or_union(struct datatype *dtype);
 bool datatype_is_struct_or_union_for_name(const char *name);
+bool datatype_is_struct_or_union_non_pointer(struct datatype *dtype);
 bool datatype_is_primitive(struct datatype *dtype);
 
 size_t datatype_size(struct datatype *dtype);
