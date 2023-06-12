@@ -553,8 +553,8 @@ enum {
 };
 
 typedef void *(*RESOLVER_NEW_ARRAY_BRACKET_ENTITY)(struct resolver_result *result, struct node *array_entity_node);
-typedef void *(*RESOLVER_DELETE_SCOPE)(struct resolver_scope *scope);
-typedef void *(*RESOLVER_DELETE_ENTITY)(struct resolver_entity *entity);
+typedef void (*RESOLVER_DELETE_SCOPE)(struct resolver_scope *scope);
+typedef void (*RESOLVER_DELETE_ENTITY)(struct resolver_entity *entity);
 typedef struct resolver_entity
 	*(*RESOLVER_MERGE_ENTITIES)
 	(struct resolver_process *process,
@@ -563,7 +563,7 @@ typedef struct resolver_entity
 	 struct resolver_entity *right_entity);
 typedef void *(*RESOLVER_MAKE_PRIVATE)
 	(struct resolver_entity *entity, struct node *node, int offset, struct resolver_scope *scope);
-typedef void *(*RESOLVER_SET_RESULT_BASE)(struct resolver_result *result, struct resolver_entity *base_entity);
+typedef void (*RESOLVER_SET_RESULT_BASE)(struct resolver_result *result, struct resolver_entity *base_entity);
 
 struct resolver_callbacks {
   RESOLVER_NEW_ARRAY_BRACKET_ENTITY new_array_entity;
@@ -586,6 +586,33 @@ struct resolver_process {
 struct resolver_array_data {
   struct vector *array_entities; // nodes of type resolver_entity
 
+};
+
+enum {
+  RESOLVER_DEFAULT_ENTITY_TYPE_STACK,
+  RESOLVER_DEFAULT_ENTITY_TYPE_SYMBOL
+};
+
+enum {
+  RESOLVER_DEFAULT_ENTITY_FLAG_IS_LOCAL_STACK = 0b00000001
+};
+
+enum {
+  RESOLVER_DEFAULT_ENTITY_DATA_TYPE_VARIABLE,
+  RESOLVER_DEFAULT_ENTITY_DATA_TYPE_FUNCTION,
+  RESOLVER_DEFAULT_ENTITY_DATA_TYPE_ARRAY_BRACKET
+};
+
+struct resolver_default_entity_data {
+  int type; // i.e. variable, func, struct etc
+  char address[60]; // address eg. [ebp-4]
+  char base_address[60]; // base address eg. ebp in address [ebp-4]
+  int offset; // offset in relation to base address
+  int flags; // flags relating to entity data
+};
+
+struct resolver_default_scope_data {
+  int flags; // flags relating to scope data
 };
 
 enum {
@@ -912,6 +939,18 @@ void symresolver_build_for_node(struct compile_process *process,
 struct symbol *
 symresolver_get_symbol_for_native_function(struct compile_process *process,
 										   const char *name);
+
+struct resolver_entity *resolver_make_entity(struct resolver_process *process, struct resolver_result *result,
+											 struct datatype *custom_dtype, struct node *node,
+											 struct resolver_entity *guided_entity, struct resolver_scope *scope);
+
+struct resolver_process *resolver_new_process(struct compile_process *compiler, struct resolver_callbacks *callbacks);
+struct resolver_entity *resolver_new_entity_for_var_node(struct resolver_process *process, struct node *node,
+														 int offset, void *private);
+struct resolver_entity *resolver_register_function(struct resolver_process *process, struct node *func_node,
+												   void *private);
+struct resolver_scope *resolver_new_scope(struct resolver_process *resolver, void *private, int flags);
+void resolver_finish_scope(struct resolver_process *resolver);
 
 struct fixup;
 

@@ -1627,6 +1627,7 @@ int parse_expressionable_single(struct history *history) {
   }
   return res;
 }
+
 void parse_expressionable(struct history *history) {
   while (parse_expressionable_single(history) == 0) {
   }
