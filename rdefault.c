@@ -1,11 +1,7 @@
-//
-// Created by David Ensikat on 12/6/2023.
-//
-
-#include <stdlib.h>
-#include <assert.h>
 #include "compiler.h"
-
+#include <assert.h>
+#include <stdlib.h>
+#include <memory.h>
 struct resolver_default_entity_data *resolver_default_entity_private(struct resolver_entity *entity) {
   return entity->private;
 }
@@ -19,6 +15,7 @@ char *resolver_default_stack_asm_address(int stack_offset, char *out) {
 	sprintf(out, "ebp%i", stack_offset);
 	return out;
   }
+
   sprintf(out, "ebp+%i", stack_offset);
   return out;
 }
@@ -31,6 +28,7 @@ struct resolver_default_entity_data *resolver_default_new_entity_data() {
 void resolver_default_global_asm_address(const char *name, int offset, char *address_out) {
   if (offset == 0) {
 	sprintf(address_out, "%s", name);
+	return;
   }
 
   sprintf(address_out, "%s+%i", name, offset);
@@ -41,9 +39,8 @@ void resolver_default_entity_data_set_address(struct resolver_default_entity_dat
   if (!var_node) {
 	return;
   }
-
   if (!variable_node(var_node)->var.name) {
-	return; // only care about variables with name when setting addresses
+	return;
   }
 
   entity_data->offset = offset;
@@ -56,8 +53,7 @@ void resolver_default_entity_data_set_address(struct resolver_default_entity_dat
   }
 }
 
-void *resolver_default_make_private(struct resolver_entity *entity, struct node *node,
-									int offset,
+void *resolver_default_make_private(struct resolver_entity *entity, struct node *node, int offset,
 									struct resolver_scope *scope) {
   struct resolver_default_entity_data *entity_data = resolver_default_new_entity_data();
   int entity_flags = 0x00;
@@ -96,9 +92,9 @@ struct resolver_default_entity_data *resolver_default_new_entity_data_for_var_no
   return entity_data;
 }
 
-struct resolver_default_entity_data *resolver_default_new_entity_data_for_array_bracket(struct node *bracket_node) {
+struct resolver_default_entity_data *resolver_default_new_entity_data_for_array_bracket(struct node *breacket_node) {
   struct resolver_default_entity_data *entity_data = resolver_default_new_entity_data();
-  entity_data->type = RESOLVER_ENTITY_TYPE_ARRAY_BRACKET;
+  entity_data->type = RESOLVER_DEFAULT_ENTITY_DATA_TYPE_ARRAY_BRACKET;
   return entity_data;
 }
 
@@ -153,12 +149,12 @@ static void resolver_default_merge_array_calculate_out_offset(struct datatype *d
   *(out_offset) += array_offset(dtype, entity->array.index, index_val);
 }
 
-struct resolver_entity *resolver_default_merge_entities(struct resolver_process *resolver,
+struct resolver_entity *resolver_default_merge_entities(struct resolver_process *process,
 														struct resolver_result *result,
 														struct resolver_entity *left_entity,
 														struct resolver_entity *right_entity) {
   int new_pos = left_entity->offset + right_entity->offset;
-  return resolver_make_entity(resolver,
+  return resolver_make_entity(process,
 							  result,
 							  &right_entity->dtype,
 							  left_entity->node,
@@ -169,4 +165,5 @@ struct resolver_entity *resolver_default_merge_entities(struct resolver_process 
 struct resolver_process *resolver_default_new_process(struct compile_process *compiler) {
   return resolver_new_process(compiler,
 							  &(struct resolver_callbacks){.new_array_entity=resolver_default_new_array_entity, .delete_entity=resolver_default_delete_entity, .delete_scope=resolver_default_delete_scope, .merge_entities=resolver_default_merge_entities, .make_private=resolver_default_make_private, .set_result_base=resolver_default_set_result_base});
+
 }
