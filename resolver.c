@@ -4,7 +4,6 @@
 #include <assert.h>
 void resolver_follow_part(struct resolver_process *resolver, struct node *node, struct resolver_result *result);
 struct resolver_entity *resolver_follow_exp(struct resolver_process *resolver, struct node *node, struct resolver_result *result);
-struct resolver_result *resolver_follow(struct resolver_process *resolver, struct node *node);
 struct resolver_entity *resolver_follow_array_bracket(struct resolver_process *resolver, struct node *node, struct resolver_result *result);
 struct resolver_entity *resolver_follow_part_return_entity(struct resolver_process *resolver, struct node *node, struct resolver_result *result);
 
@@ -353,7 +352,7 @@ struct resolver_entity *resolver_create_new_cast_entity(struct resolver_process 
 struct resolver_entity *resolver_create_new_entity_for_var_node_custom_scope(struct resolver_process *process, struct node *var_node, void *private, struct resolver_scope *scope, int offset)
 {
     assert(var_node->type == NODE_TYPE_VARIABLE);
-    struct resolver_entity *entity = resolver_create_new_entity(NULL, NODE_TYPE_VARIABLE, private);
+    struct resolver_entity *entity = resolver_create_new_entity(NULL, RESOLVER_ENTITY_TYPE_VARIABLE, private);
     if (!entity)
     {
         return NULL;

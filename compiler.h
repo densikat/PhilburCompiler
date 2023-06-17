@@ -13,6 +13,12 @@ struct pos {
   const char *filename;
 };
 
+#define RESULT_VALUE "result_value"
+#define EAX_REG "EAX"
+#define EBX_REG "EBX"
+#define ECX_REG "ECX"
+#define EDX_REG "EDX"
+
 #define C_STACK_ALIGNMENT 16
 #define STACK_PUSH_SIZE 4
 #define C_ALIGN(size) ((size % C_STACK_ALIGNMENT) ? size + (C_STACK_ALIGNMENT - (size % C_STACK_ALIGNMENT)) : size)
@@ -129,6 +135,11 @@ struct lex_process {
 };
 
 enum { COMPILER_FILE_COMPILED_OK, COMPILER_FAILED_WITH_ERRORS };
+
+enum {
+  COMPILE_PROCESS_EXECUTE_NASM = 0b00000001,
+  COMPILE_PROCESS_EXPORT_AS_OBJECT = 0b00000010
+};
 
 struct scope {
   int flags;
@@ -987,7 +998,8 @@ struct resolver_entity *resolver_make_entity(struct resolver_process *process, s
 											 struct resolver_entity *guided_entity, struct resolver_scope *scope);
 
 struct resolver_process *resolver_new_process(struct compile_process *compiler, struct resolver_callbacks *callbacks);
-struct resolver_entity *resolver_new_entity_for_var_node(struct resolver_process *process, struct node *var_node, void *private, int offset);
+struct resolver_entity *resolver_new_entity_for_var_node(struct resolver_process *process, struct node *var_node,
+														 void *private, int offset);
 
 struct resolver_entity *resolver_register_function(struct resolver_process *process, struct node *func_node,
 												   void *private);
@@ -1025,6 +1037,10 @@ struct resolver_entity *resolver_default_merge_entities(struct resolver_process 
 														struct resolver_entity *left_entity,
 														struct resolver_entity *right_entity);
 struct resolver_process *resolver_default_new_process(struct compile_process *compiler);
+struct resolver_result *resolver_follow(struct resolver_process *resolver, struct node *node);
+bool resolver_result_ok(struct resolver_result *result);
+struct resolver_entity *resolver_result_entity_root(struct resolver_result *result);
+struct resolver_entity *resolver_result_entity_next(struct resolver_entity *entity);
 
 struct fixup;
 
